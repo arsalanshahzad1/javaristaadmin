@@ -9,7 +9,7 @@ interface GetRecipesParams {
   isPublished?: boolean;
 }
 
-interface RecipePayload {
+interface RecipeFormPayload {
   title: string;
   description?: string;
   brewMethod: string;
@@ -17,6 +17,50 @@ interface RecipePayload {
   totalTime: number;
   steps: RecipeStep[];
   tags?: string[];
+  coffeeDose?: number;
+  waterAmount?: number;
+  grindSize?: string;
+  image?: string;
+  isPublished?: boolean;
+  isFeatured?: boolean;
+  isPremium?: boolean;
+}
+
+type BackendDifficulty = 'easy' | 'medium' | 'hard';
+
+function mapDifficulty(difficulty: RecipeFormPayload['difficulty']): BackendDifficulty {
+  if (difficulty === 'beginner') return 'easy';
+  if (difficulty === 'intermediate') return 'medium';
+  return 'hard';
+}
+
+function mapSteps(steps: RecipeStep[] = []) {
+  return steps.map((step, index) => ({
+    stepNumber: step.order ?? index + 1,
+    title: `Step ${step.order ?? index + 1}`,
+    description: step.instruction,
+    timerSeconds: step.duration,
+  }));
+}
+
+function mapRecipePayload(data: Partial<RecipeFormPayload>) {
+  const mapped: Record<string, unknown> = {
+    name: data.title ?? '',
+    description: data.description ?? '',
+    brewMethod: data.brewMethod ?? '',
+    difficulty: mapDifficulty((data.difficulty ?? 'advanced') as RecipeFormPayload['difficulty']),
+    brewTime: data.totalTime ?? 0,
+    steps: mapSteps(data.steps),
+    tags: data.tags ?? [],
+    image: data.image,
+    isPremium: data.isPremium ?? false,
+  };
+
+  if (data.coffeeDose !== undefined) mapped.coffeeDose = data.coffeeDose;
+  if (data.waterAmount !== undefined) mapped.waterAmount = data.waterAmount;
+  if (data.grindSize !== undefined) mapped.grindSize = data.grindSize;
+
+  return mapped;
 }
 
 export const recipesApi = {
@@ -26,11 +70,11 @@ export const recipesApi = {
   getRecipeById: (id: string) =>
     api.get<ApiResponse<Recipe>>(`/recipes/${id}`),
 
-  createRecipe: (data: RecipePayload) =>
-    api.post<ApiResponse<Recipe>>('/recipes', data),
+  createRecipe: (data: RecipeFormPayload) =>
+    api.post<ApiResponse<Recipe>>('/recipes', mapRecipePayload(data)),
 
-  updateRecipe: (id: string, data: Partial<RecipePayload>) =>
-    api.put<ApiResponse<Recipe>>(`/recipes/${id}`, data),
+  updateRecipe: (id: string, data: Partial<RecipeFormPayload>) =>
+    api.put<ApiResponse<Recipe>>(`/recipes/${id}`, mapRecipePayload(data)),
 
   deleteRecipe: (id: string) =>
     api.delete<ApiResponse<void>>(`/admin/recipes/${id}`),

@@ -95,7 +95,6 @@ export function RecipeFormPage() {
   const [tagInput, setTagInput] = useState('');
 
   // Image state
-  const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -203,7 +202,6 @@ export function RecipeFormPage() {
       toast.error('Please select an image file');
       return;
     }
-    setImageFile(file);
     const reader = new FileReader();
     reader.onload = (e) => setImagePreview(e.target?.result as string);
     reader.readAsDataURL(file);
@@ -220,7 +218,6 @@ export function RecipeFormPage() {
   );
 
   const removeImage = () => {
-    setImageFile(null);
     setImagePreview(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -239,6 +236,10 @@ export function RecipeFormPage() {
         difficulty: values.difficulty,
         totalTime,
         tags,
+        image: imagePreview ?? undefined,
+        coffeeDose: values.coffeeDose,
+        waterAmount: values.waterAmount,
+        grindSize: values.grindSize,
         steps: values.steps.map((s, i) => ({
           order: i + 1,
           instruction: s.instruction,
@@ -258,11 +259,6 @@ export function RecipeFormPage() {
       // Sync publish settings
       const publishedState = forcePublish ? true : values.isPublished;
       await recipesApi.publishRecipe(recipeId!, publishedState, values.isFeatured);
-
-      // Upload image if a new file was selected
-      if (imageFile && recipeId) {
-        await recipesApi.uploadRecipeImage(recipeId, imageFile);
-      }
 
       toast.success(isEdit ? 'Recipe updated' : 'Recipe created');
       navigate('/recipes');
