@@ -45,6 +45,10 @@ function RecipeThumbnail({ src }: { src?: string }) {
   );
 }
 
+function formatCount(value?: number) {
+  return Number(value ?? 0).toLocaleString();
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function RecipesPage() {
@@ -154,11 +158,11 @@ export function RecipesPage() {
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1.5 text-xs text-[#999]">
             <BookOpen size={12} className="text-[#555]" />
-            {r.brewCount.toLocaleString()}
+            {formatCount(r.brewCount)}
           </span>
           <span className="flex items-center gap-1.5 text-xs text-[#999]">
             <Heart size={12} className="text-[#555]" />
-            {r.likeCount.toLocaleString()}
+            {formatCount(r.likeCount ?? (r as ExtRecipe & { likesCount?: number }).likesCount)}
           </span>
         </div>
       ),

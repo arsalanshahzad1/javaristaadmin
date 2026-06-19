@@ -71,6 +71,10 @@ const ACTIVITY_TABS = [
 
 const PLAN_COLORS = ['#555555', '#D62B2B'];
 
+function formatCount(value?: number) {
+  return Number(value ?? 0).toLocaleString();
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function DashboardPage() {
@@ -315,8 +319,12 @@ export function DashboardPage() {
                         ? (recipe.brewMethod as BrewMethod).name
                         : '—'}
                     </span>
-                    <span className="text-xs text-white text-right">{recipe.brewCount}</span>
-                    <span className="text-xs text-[#666] text-right">{recipe.likeCount}</span>
+                    <span className="text-xs text-white text-right">
+                      {formatCount(recipe.brewCount)}
+                    </span>
+                    <span className="text-xs text-[#666] text-right">
+                      {formatCount(recipe.likeCount ?? (recipe as Recipe & { likesCount?: number }).likesCount)}
+                    </span>
                     <Badge variant={recipe.isPublished ? 'success' : 'default'}>
                       {recipe.isPublished ? 'live' : 'draft'}
                     </Badge>
