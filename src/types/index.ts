@@ -1,3 +1,20 @@
+export interface QuizQuestion {
+  question: string;
+  options: [string, string, string, string];
+  correctIndex: 0 | 1 | 2 | 3;
+}
+
+export interface Lesson {
+  _id: string;
+  title: string;
+  order?: number;
+  contentType?: 'video' | 'text' | 'quiz';
+  videoUrl?: string;
+  body?: string;
+  durationSeconds?: number;
+  questions?: QuizQuestion[];
+}
+
 export interface User {
   _id: string;
   name: string;

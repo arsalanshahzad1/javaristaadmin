@@ -1,7 +1,7 @@
 import { RouterProvider } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
-import { router } from './router';
+import { adminRouter } from './router/AdminRouter';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -12,7 +12,7 @@ const queryClient = new QueryClient({
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <RouterProvider router={adminRouter} />
       <Toaster
         position="top-right"
         toastOptions={{

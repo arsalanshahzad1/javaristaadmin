@@ -1,360 +1,238 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, LogOut, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import type { AxiosError } from 'axios';
+import adminApiClient from '../../api/adminApiClient';
 import { authApi } from '../../api/auth.api';
-import { PageHeader } from '../../components/layout/PageHeader';
-import { Badge } from '../../components/ui/Badge';
-import { Button } from '../../components/ui/Button';
-import { Card } from '../../components/ui/Card';
-import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
-import { Input } from '../../components/ui/Input';
-import { Toggle } from '../../components/ui/Toggle';
+import { adminAuthStorage } from '../../api/adminAuthStorage';
 import { useAuth } from '../../hooks/useAuth';
-import { formatDateTime } from '../../utils/formatters';
+import { Card } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
+import { Badge } from '../../components/ui/Badge';
 
-type Tab = 'profile' | 'security' | 'app';
-type PasswordField = 'current' | 'next' | 'confirm';
-type DangerAction = 'brewLogs' | 'seedData' | null;
+type ApiEnvelope<T> = { success: boolean; message: string; data: T };
 
-const tabs: Array<{ key: Tab; label: string }> = [
-  { key: 'profile', label: 'Profile' },
-  { key: 'security', label: 'Security' },
-  { key: 'app', label: 'App Settings' },
-];
+type PasswordForm = {
+  oldPassword: string;
+  newPassword: string;
+  confirmNewPassword: string;
+};
 
-function getInitials(name?: string) {
-  if (!name) return 'A';
+type TestStatus = 'idle' | 'loading' | 'success' | 'error';
 
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('');
+function getErrorMessage(error: unknown) {
+  return (error as AxiosError<ApiEnvelope<unknown>>).response?.data?.message ?? 'Something went wrong';
 }
 
-function passwordStrength(password: string) {
-  let score = 0;
-
-  if (password.length >= 8) score += 1;
-  if (/[A-Z]/.test(password)) score += 1;
-  if (/[0-9]/.test(password)) score += 1;
-  if (/[^A-Za-z0-9]/.test(password)) score += 1;
-
-  return score;
+async function changePassword({ oldPassword, newPassword }: { oldPassword: string; newPassword: string }) {
+  const res = await adminApiClient.put<ApiEnvelope<void>>('/users/change-password', { oldPassword, newPassword });
+  return res.data;
 }
 
 function PasswordInput({
   label,
-  value,
-  visible,
-  onChange,
-  onToggle,
-}: {
-  label: string;
-  value: string;
-  visible: boolean;
-  onChange: (value: string) => void;
-  onToggle: () => void;
-}) {
+  error,
+  ...rest
+}: React.InputHTMLAttributes<HTMLInputElement> & { label: string; error?: string }) {
+  const [visible, setVisible] = useState(false);
   const Icon = visible ? EyeOff : Eye;
-
   return (
-    <div className="relative">
-      <Input
-        label={label}
-        type={visible ? 'text' : 'password'}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="pr-10"
-      />
-      <button
-        type="button"
-        onClick={onToggle}
-        className="absolute right-3 top-9 text-[#666] hover:text-white transition-colors cursor-pointer"
-        aria-label={visible ? 'Hide password' : 'Show password'}
-      >
-        <Icon size={16} />
-      </button>
+    <div className="space-y-1">
+      <label className="block text-sm font-medium text-[#ccc]">{label}</label>
+      <div className="relative">
+        <input
+          type={visible ? 'text' : 'password'}
+          className="w-full rounded-lg border border-[#2A2A2A] bg-[#111] px-3 py-2 text-sm text-white pr-10 outline-none focus:border-[#D62B2B] focus:ring-2 focus:ring-[#D62B2B]/20 transition-colors"
+          {...rest}
+        />
+        <button
+          type="button"
+          onClick={() => setVisible((v) => !v)}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#555] hover:text-white transition-colors cursor-pointer"
+          aria-label={visible ? 'Hide password' : 'Show password'}
+        >
+          <Icon size={15} />
+        </button>
+      </div>
+      {error && <p className="text-xs text-red-400">{error}</p>}
     </div>
   );
 }
 
 export function SettingsPage() {
-  const { user, setUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<Tab>('profile');
-  const [fullName, setFullName] = useState(user?.name ?? '');
-  const [passwords, setPasswords] = useState({ current: '', next: '', confirm: '' });
-  const [visiblePasswords, setVisiblePasswords] = useState<Record<PasswordField, boolean>>({
-    current: false,
-    next: false,
-    confirm: false,
-  });
-  const [featureFlags, setFeatureFlags] = useState({
-    premiumContent: true,
-    registration: true,
-    espressoDialIn: true,
-    coffeeJournal: true,
-  });
-  const [dangerAction, setDangerAction] = useState<DangerAction>(null);
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const storedUser = adminAuthStorage.getUser();
+  const [testStatus, setTestStatus] = useState<TestStatus>('idle');
 
-  const strength = useMemo(() => passwordStrength(passwords.next), [passwords.next]);
-  const strengthLabel = ['Weak', 'Weak', 'Fair', 'Good', 'Strong'][strength];
-
-  const updateProfileMutation = useMutation({
-    mutationFn: () => authApi.updateProfile({ name: fullName.trim() }),
-    onSuccess: (response) => {
-      setUser(response.data.data);
-      toast.success('Profile updated');
-    },
-    onError: () => toast.error('Unable to update profile'),
+  const { register, handleSubmit, reset, watch, formState: { errors } } = useForm<PasswordForm>({
+    defaultValues: { oldPassword: '', newPassword: '', confirmNewPassword: '' },
   });
 
   const changePasswordMutation = useMutation({
-    mutationFn: () => authApi.changePassword(passwords.current, passwords.next),
+    mutationFn: changePassword,
     onSuccess: () => {
-      setPasswords({ current: '', next: '', confirm: '' });
-      toast.success('Password updated');
+      toast.success('Password updated successfully');
+      reset();
     },
-    onError: () => toast.error('Unable to update password'),
+    onError: (error) => toast.error(getErrorMessage(error)),
   });
 
-  const handleSaveProfile = (event: FormEvent) => {
-    event.preventDefault();
-
-    if (!fullName.trim()) {
-      toast.error('Full name is required');
-      return;
-    }
-
-    updateProfileMutation.mutate();
+  const onPasswordSubmit = (data: PasswordForm) => {
+    changePasswordMutation.mutate({ oldPassword: data.oldPassword, newPassword: data.newPassword });
   };
 
-  const handlePasswordSubmit = (event: FormEvent) => {
-    event.preventDefault();
-
-    if (!passwords.current || !passwords.next || !passwords.confirm) {
-      toast.error('Fill in all password fields');
-      return;
-    }
-
-    if (passwords.next !== passwords.confirm) {
-      toast.error('New passwords do not match');
-      return;
-    }
-
-    changePasswordMutation.mutate();
+  const handleLogout = async () => {
+    try { await authApi.logout(); } catch { /* ignore */ }
+    adminAuthStorage.clearSession();
+    logout();
+    navigate('/login');
   };
 
-  const confirmDangerAction = () => {
-    toast.success(dangerAction === 'brewLogs' ? 'Brew logs cleared' : 'Seed data reset');
-    setDangerAction(null);
+  const handleTestConnection = async () => {
+    setTestStatus('loading');
+    try {
+      await adminApiClient.get('/auth/me');
+      setTestStatus('success');
+    } catch {
+      setTestStatus('error');
+    }
   };
+
+  const displayUser = user ?? storedUser;
+  const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
   return (
-    <div className="space-y-5">
-      <PageHeader title="Settings" />
-
-      <div className="flex gap-1 flex-wrap">
-        {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            onClick={() => setActiveTab(tab.key)}
-            className={`px-4 py-2 text-xs rounded-lg transition-colors cursor-pointer font-medium ${
-              activeTab === tab.key
-                ? 'bg-[#D62B2B] text-white'
-                : 'text-[#666] hover:text-white hover:bg-[#242424] border border-[#2A2A2A]'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+    <div className="space-y-6 max-w-2xl">
+      <div>
+        <h1 className="text-xl font-semibold text-white mb-1">Settings</h1>
+        <p className="text-sm text-[#666]">Manage your account and view app configuration.</p>
       </div>
 
-      {activeTab === 'profile' && (
-        <Card className="max-w-2xl">
-          <form onSubmit={handleSaveProfile} className="space-y-6">
-            <div className="flex flex-col items-start gap-3">
-              <div className="h-20 w-20 rounded-full bg-[#D62B2B] flex items-center justify-center text-2xl font-semibold text-white">
-                {getInitials(user?.name)}
-              </div>
-              <button type="button" className="text-sm text-[#D62B2B] hover:text-white transition-colors cursor-pointer">
-                Change Avatar
-              </button>
-            </div>
+      {/* ── My Account ── */}
+      <section className="space-y-4">
+        <h2 className="text-sm font-semibold text-[#999] uppercase tracking-widest">My Account</h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input
-                label="Full Name"
-                value={fullName}
-                onChange={(event) => setFullName(event.target.value)}
-              />
-              <Input label="Email" value={user?.email ?? ''} readOnly />
-              <div className="flex flex-col gap-1.5">
-                <span className="text-sm text-[#999] font-medium">Role</span>
-                <div className="h-10 flex items-center">
-                  <Badge variant="info">{user?.role ?? 'admin'}</Badge>
-                </div>
+        {/* Identity */}
+        <Card>
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-[#D62B2B] flex items-center justify-center text-lg font-semibold text-white flex-shrink-0">
+              {displayUser?.name?.[0]?.toUpperCase() ?? 'A'}
+            </div>
+            <div className="min-w-0">
+              <p className="text-white font-medium leading-tight">{displayUser?.name ?? '—'}</p>
+              <p className="text-sm text-[#666] mt-0.5">{displayUser?.email ?? '—'}</p>
+              <div className="mt-2">
+                <Badge variant="info">{displayUser?.role ?? 'admin'}</Badge>
               </div>
             </div>
+          </div>
+        </Card>
 
-            <Button type="submit" loading={updateProfileMutation.isPending}>
-              Save Profile
+        {/* Change password */}
+        <Card title="Change Password">
+          <form onSubmit={handleSubmit(onPasswordSubmit)} className="space-y-4">
+            <PasswordInput
+              label="Current Password"
+              autoComplete="current-password"
+              error={errors.oldPassword?.message}
+              {...register('oldPassword', { required: 'Current password is required' })}
+            />
+            <PasswordInput
+              label="New Password"
+              autoComplete="new-password"
+              error={errors.newPassword?.message}
+              {...register('newPassword', {
+                required: 'New password is required',
+                minLength: { value: 8, message: 'Must be at least 8 characters' },
+              })}
+            />
+            <PasswordInput
+              label="Confirm New Password"
+              autoComplete="new-password"
+              error={errors.confirmNewPassword?.message}
+              {...register('confirmNewPassword', {
+                required: 'Please confirm your new password',
+                validate: (val) => val === watch('newPassword') || 'Passwords do not match',
+              })}
+            />
+            <Button type="submit" loading={changePasswordMutation.isPending}>
+              Update Password
             </Button>
           </form>
         </Card>
-      )}
 
-      {activeTab === 'security' && (
-        <div className="space-y-5 max-w-2xl">
-          <Card title="Change Password">
-            <form onSubmit={handlePasswordSubmit} className="space-y-4">
-              <PasswordInput
-                label="Current Password"
-                value={passwords.current}
-                visible={visiblePasswords.current}
-                onChange={(value) => setPasswords((current) => ({ ...current, current: value }))}
-                onToggle={() => setVisiblePasswords((current) => ({ ...current, current: !current.current }))}
-              />
-              <div>
-                <PasswordInput
-                  label="New Password"
-                  value={passwords.next}
-                  visible={visiblePasswords.next}
-                  onChange={(value) => setPasswords((current) => ({ ...current, next: value }))}
-                  onToggle={() => setVisiblePasswords((current) => ({ ...current, next: !current.next }))}
-                />
-                <div className="mt-2">
-                  <div className="h-1.5 rounded-full bg-[#2A2A2A] overflow-hidden">
-                    <div
-                      className="h-full bg-[#D62B2B] transition-all"
-                      style={{ width: `${Math.max(strength, 1) * 25}%` }}
-                    />
-                  </div>
-                  <p className="mt-1 text-xs text-[#666]">Password strength: {strengthLabel}</p>
-                </div>
-              </div>
-              <PasswordInput
-                label="Confirm Password"
-                value={passwords.confirm}
-                visible={visiblePasswords.confirm}
-                onChange={(value) => setPasswords((current) => ({ ...current, confirm: value }))}
-                onToggle={() => setVisiblePasswords((current) => ({ ...current, confirm: !current.confirm }))}
-              />
-              <Button type="submit" loading={changePasswordMutation.isPending}>
-                Update Password
-              </Button>
-            </form>
-          </Card>
-
-          <Card title="Active Sessions">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <div>
-                <p className="text-xs uppercase tracking-wide text-[#666]">Browser</p>
-                <p className="mt-1 text-white">Current browser</p>
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-wide text-[#666]">Login Time</p>
-                <p className="mt-1 text-white">{formatDateTime(new Date())}</p>
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-wide text-[#666]">IP</p>
-                <p className="mt-1 text-white">192.168.0.1</p>
-              </div>
+        {/* Logout */}
+        <Card>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-white">Sign out</p>
+              <p className="text-xs text-[#666] mt-0.5">End your current admin session.</p>
             </div>
-          </Card>
-        </div>
-      )}
+            <Button variant="ghost" onClick={handleLogout}>
+              <LogOut size={14} />
+              Logout
+            </Button>
+          </div>
+        </Card>
+      </section>
 
-      {activeTab === 'app' && (
-        <div className="space-y-5 max-w-3xl">
-          <Card title="Feature Flags">
-            <div className="divide-y divide-[#2A2A2A]">
-              <FeatureFlag
-                label="Premium Content Enabled"
-                checked={featureFlags.premiumContent}
-                onChange={(value) => setFeatureFlags((current) => ({ ...current, premiumContent: value }))}
-              />
-              <FeatureFlag
-                label="New User Registration"
-                checked={featureFlags.registration}
-                onChange={(value) => setFeatureFlags((current) => ({ ...current, registration: value }))}
-              />
-              <FeatureFlag
-                label="Espresso Dial-In Feature"
-                checked={featureFlags.espressoDialIn}
-                onChange={(value) => setFeatureFlags((current) => ({ ...current, espressoDialIn: value }))}
-              />
-              <FeatureFlag
-                label="Coffee Journal"
-                checked={featureFlags.coffeeJournal}
-                onChange={(value) => setFeatureFlags((current) => ({ ...current, coffeeJournal: value }))}
-              />
+      {/* ── App Configuration ── */}
+      <section className="space-y-4">
+        <h2 className="text-sm font-semibold text-[#999] uppercase tracking-widest">App Configuration</h2>
+
+        <Card title="Reference">
+          <dl className="space-y-4 text-sm">
+            <div className="flex flex-col gap-1">
+              <dt className="text-[#555] text-xs uppercase tracking-wide">API Base URL</dt>
+              <dd className="text-white font-mono break-all">{apiBaseUrl}</dd>
             </div>
-          </Card>
-
-          <Card title="Danger Zone" className="border-red-900/60">
-            <div className="space-y-4">
-              <DangerRow
-                title="Clear all brew logs"
-                description="Remove every recorded brew session from the admin dataset."
-                action="Clear Brew Logs"
-                onClick={() => setDangerAction('brewLogs')}
-              />
-              <DangerRow
-                title="Reset seed data"
-                description="Restore the application demo data to its seeded defaults."
-                action="Reset Seed Data"
-                onClick={() => setDangerAction('seedData')}
-              />
+            <div className="flex flex-col gap-1">
+              <dt className="text-[#555] text-xs uppercase tracking-wide">Admin Role</dt>
+              <dd>
+                <Badge variant="info">{displayUser?.role ?? 'admin'}</Badge>
+              </dd>
             </div>
-          </Card>
-        </div>
-      )}
+            <div className="flex flex-col gap-1">
+              <dt className="text-[#555] text-xs uppercase tracking-wide">Admin ID</dt>
+              <dd className="text-white font-mono text-xs">{displayUser?._id ?? '—'}</dd>
+            </div>
+          </dl>
+        </Card>
 
-      <ConfirmDialog
-        isOpen={dangerAction !== null}
-        onClose={() => setDangerAction(null)}
-        onConfirm={confirmDangerAction}
-        title={dangerAction === 'brewLogs' ? 'Clear all brew logs?' : 'Reset seed data?'}
-        message="This action cannot be undone."
-        confirmLabel="Confirm"
-      />
-    </div>
-  );
-}
+        <Card title="API Health">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleTestConnection}
+              disabled={testStatus === 'loading'}
+            >
+              {testStatus === 'loading' ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : null}
+              Test API Connection
+            </Button>
 
-function FeatureFlag({ label, checked, onChange }: { label: string; checked: boolean; onChange: (value: boolean) => void }) {
-  return (
-    <div className="flex items-center justify-between gap-4 py-4 first:pt-0 last:pb-0">
-      <span className="text-sm text-white">{label}</span>
-      <Toggle checked={checked} onChange={onChange} />
-    </div>
-  );
-}
-
-function DangerRow({
-  title,
-  description,
-  action,
-  onClick,
-}: {
-  title: string;
-  description: string;
-  action: string;
-  onClick: () => void;
-}) {
-  return (
-    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 rounded-lg border border-red-900/40 bg-red-950/10 p-4">
-      <div>
-        <p className="text-sm font-medium text-white">{title}</p>
-        <p className="mt-1 text-xs text-[#999]">{description}</p>
-      </div>
-      <Button variant="danger" onClick={onClick}>
-        {action}
-      </Button>
+            {testStatus === 'success' && (
+              <span className="flex items-center gap-1.5 text-xs font-medium text-green-400">
+                <CheckCircle size={13} />
+                Connected
+              </span>
+            )}
+            {testStatus === 'error' && (
+              <span className="flex items-center gap-1.5 text-xs font-medium text-red-400">
+                <XCircle size={13} />
+                Unreachable
+              </span>
+            )}
+          </div>
+        </Card>
+      </section>
     </div>
   );
 }

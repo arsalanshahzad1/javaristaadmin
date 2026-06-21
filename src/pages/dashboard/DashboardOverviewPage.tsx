@@ -1,0 +1,229 @@
+import { useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { format, formatDistanceToNow } from 'date-fns';
+import { Award, BookOpen, ClipboardList, Coffee, FileText, GraduationCap, Plus, Star, Users } from 'lucide-react';
+import type { AxiosError } from 'axios';
+import adminApiClient from '../../api/adminApiClient';
+import { Badge } from '../../components/ui/Badge';
+import { StatCard } from '../../components/ui/StatCard';
+import { IssueCertificationModal } from '../../components/certifications/IssueCertificationModal';
+
+type ApiEnvelope<T> = {
+  success: boolean;
+  message: string;
+  data: T;
+  pagination?: { page: number; limit: number; total: number; pages: number };
+};
+
+type BrewStats = { totalBrews: number; avgRating: number; thisMonth: number };
+type Course = { _id: string; isActive?: boolean };
+type TeamPerformance = { certifications?: { total?: number; list?: unknown[] } };
+type ChecklistSubmission = {
+  _id: string;
+  status: string;
+  submittedAt?: string;
+  createdAt?: string;
+  template?: { title?: string };
+  submittedBy?: { name?: string };
+};
+type CommunityShare = {
+  _id: string;
+  caption?: string;
+  createdAt?: string;
+  user?: { name?: string };
+  brewLog?: { rating?: number; tasteNotes?: string; brewMethod?: { name?: string } };
+};
+
+const statusVariant: Record<string, 'success' | 'warning' | 'danger' | 'info' | 'default'> = {
+  in_progress: 'warning',
+  submitted: 'info',
+  approved: 'success',
+  flagged: 'danger',
+};
+
+function unwrap<T>(response: { data: ApiEnvelope<T> }) {
+  return response.data;
+}
+
+async function getBrewStats() {
+  return unwrap(await adminApiClient.get<ApiEnvelope<BrewStats>>('/brew-logs/stats')).data;
+}
+
+async function getCourses() {
+  return unwrap(await adminApiClient.get<ApiEnvelope<Course[]>>('/academy/courses'));
+}
+
+async function getTeamPerformance() {
+  return unwrap(await adminApiClient.get<ApiEnvelope<TeamPerformance[] | { users?: TeamPerformance[]; team?: TeamPerformance[] }>>('/performance/team')).data;
+}
+
+async function getRecentChecklistSubmissions() {
+  return unwrap(await adminApiClient.get<ApiEnvelope<ChecklistSubmission[]>>('/checklists/submissions', { params: { limit: 5 } })).data;
+}
+
+async function getRecentCommunityShares() {
+  return unwrap(await adminApiClient.get<ApiEnvelope<CommunityShare[]>>('/community/explore', { params: { limit: 5 } })).data;
+}
+
+function getErrorMessage(error: unknown) {
+  return (error as AxiosError<ApiEnvelope<unknown>>).response?.data?.message || 'Something went wrong';
+}
+
+function formatCount(value: number | undefined) {
+  return Number(value ?? 0).toLocaleString();
+}
+
+function formatStatus(status: string) {
+  return status.split('_').map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
+}
+
+function SkeletonBlock({ className = '' }: { className?: string }) {
+  return <div className={`animate-pulse rounded-lg bg-[#242424] ${className}`} />;
+}
+
+function SectionError({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="rounded-lg border border-red-900/40 bg-red-900/10 p-4 text-sm">
+      <p className="text-red-300">{message}</p>
+      <button type="button" onClick={onRetry} className="mt-3 rounded-lg border border-red-800/60 px-3 py-1.5 text-xs font-medium text-red-200 hover:bg-red-900/20">
+        Try again
+      </button>
+    </div>
+  );
+}
+
+function SectionCard({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] p-5">
+      <h2 className="mb-4 text-base font-semibold text-white">{title}</h2>
+      {children}
+    </section>
+  );
+}
+
+function getTeamList(teamData: TeamPerformance[] | { users?: TeamPerformance[]; team?: TeamPerformance[] } | undefined) {
+  if (Array.isArray(teamData)) return teamData;
+  return teamData?.users ?? teamData?.team ?? [];
+}
+
+export function DashboardOverviewPage() {
+  const navigate = useNavigate();
+  const [isIssueModalOpen, setIssueModalOpen] = useState(false);
+
+  const brewStatsQuery = useQuery({ queryKey: ['dashboard-brew-stats'], queryFn: getBrewStats });
+  const coursesQuery = useQuery({ queryKey: ['dashboard-academy-courses'], queryFn: getCourses });
+  const teamQuery = useQuery({ queryKey: ['dashboard-team-performance'], queryFn: getTeamPerformance });
+  const checklistQuery = useQuery({ queryKey: ['dashboard-recent-checklist-submissions'], queryFn: getRecentChecklistSubmissions });
+  const communityQuery = useQuery({ queryKey: ['dashboard-recent-community-shares'], queryFn: getRecentCommunityShares });
+
+  const teamMembers = useMemo(() => getTeamList(teamQuery.data), [teamQuery.data]);
+  const certificationsIssued = teamMembers.reduce((sum, member) => sum + (member.certifications?.total ?? member.certifications?.list?.length ?? 0), 0);
+  const activeCourses = coursesQuery.data?.pagination?.total ?? coursesQuery.data?.data.filter((course) => course.isActive !== false).length ?? 0;
+  const statsLoading = brewStatsQuery.isLoading || coursesQuery.isLoading || teamQuery.isLoading;
+  const statsError = brewStatsQuery.error || coursesQuery.error || teamQuery.error;
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-white">Dashboard</h1>
+        <p className="mt-1 text-sm text-[#777]">Overview of JavaRista learning, operations, and community activity.</p>
+      </div>
+
+      {statsError ? (
+        <SectionError message={getErrorMessage(statsError)} onRetry={() => { brewStatsQuery.refetch(); coursesQuery.refetch(); teamQuery.refetch(); }} />
+      ) : statsLoading ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">{[0, 1, 2, 3].map((item) => <SkeletonBlock key={item} className="h-28" />)}</div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard title="Total Brews" value={formatCount(brewStatsQuery.data?.totalBrews)} icon={<Coffee size={18} />} change={`${formatCount(brewStatsQuery.data?.thisMonth)} this month`} />
+          <StatCard title="Avg Brew Rating" value={brewStatsQuery.data?.avgRating != null ? `${brewStatsQuery.data.avgRating.toFixed(1)} / 5` : '0.0 / 5'} icon={<Star size={18} />} />
+          <StatCard title="Active Courses" value={formatCount(activeCourses)} icon={<BookOpen size={18} />} />
+          <StatCard title="Certifications Issued" value={formatCount(certificationsIssued)} icon={<Award size={18} />} />
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <SectionCard title="Recent Checklist Submissions">
+          {checklistQuery.isLoading ? (
+            <div className="space-y-3">{[0, 1, 2, 3, 4].map((item) => <SkeletonBlock key={item} className="h-10" />)}</div>
+          ) : checklistQuery.isError ? (
+            <SectionError message={getErrorMessage(checklistQuery.error)} onRetry={() => checklistQuery.refetch()} />
+          ) : (checklistQuery.data ?? []).length === 0 ? (
+            <div className="py-10 text-center"><ClipboardList className="mx-auto mb-3 text-[#555]" size={28} /><p className="text-sm text-[#777]">No checklist submissions yet</p></div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="sticky top-0 text-xs uppercase text-[#666]">
+                  <tr className="border-b border-[#2A2A2A]">
+                    <th className="pb-3 font-medium">Employee name</th>
+                    <th className="pb-3 font-medium">Checklist title</th>
+                    <th className="pb-3 font-medium">Status</th>
+                    <th className="pb-3 font-medium">Submitted at</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(checklistQuery.data ?? []).map((submission, index) => (
+                    <tr key={submission._id} onClick={() => navigate(`/checklists/submissions/${submission._id}`)} className={`${index % 2 === 0 ? 'bg-[#171717]' : 'bg-[#1E1E1E]'} cursor-pointer border-b border-[#242424] hover:bg-[#242424]`}>
+                      <td className="px-3 py-3 text-white">{submission.submittedBy?.name ?? 'Unknown employee'}</td>
+                      <td className="px-3 py-3 text-[#ccc]">{submission.template?.title ?? 'Untitled checklist'}</td>
+                      <td className="px-3 py-3"><Badge variant={statusVariant[submission.status] ?? 'default'}>{formatStatus(submission.status)}</Badge></td>
+                      <td className="px-3 py-3 text-[#999]">{submission.submittedAt || submission.createdAt ? format(new Date(submission.submittedAt ?? submission.createdAt ?? ''), 'MMM d, yyyy h:mm a') : 'Not submitted'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </SectionCard>
+
+        <SectionCard title="Recent Community Shares">
+          {communityQuery.isLoading ? (
+            <div className="space-y-3">{[0, 1, 2, 3, 4].map((item) => <SkeletonBlock key={item} className="h-20" />)}</div>
+          ) : communityQuery.isError ? (
+            <SectionError message={getErrorMessage(communityQuery.error)} onRetry={() => communityQuery.refetch()} />
+          ) : (communityQuery.data ?? []).length === 0 ? (
+            <div className="py-10 text-center"><Users className="mx-auto mb-3 text-[#555]" size={28} /><p className="text-sm text-[#777]">No community shares yet</p></div>
+          ) : (
+            <div className="space-y-3">
+              {(communityQuery.data ?? []).map((share) => (
+                <article key={share._id} className="rounded-lg border border-[#2A2A2A] bg-[#151515] p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium text-white">{share.user?.name ?? 'Unknown user'}</p>
+                      <p className="mt-0.5 text-xs text-[#777]">{share.brewLog?.brewMethod?.name ?? 'Brew method'} - {share.brewLog?.rating != null ? `${share.brewLog.rating}/5` : 'No rating'}</p>
+                    </div>
+                    <span className="shrink-0 text-xs text-[#666]">{share.createdAt ? formatDistanceToNow(new Date(share.createdAt), { addSuffix: true }) : 'Recently'}</span>
+                  </div>
+                  <p className="mt-3 line-clamp-2 text-sm text-[#bbb]">{share.caption || share.brewLog?.tasteNotes || 'No caption provided'}</p>
+                </article>
+              ))}
+            </div>
+          )}
+        </SectionCard>
+      </div>
+
+      <SectionCard title="Quick Actions">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            { label: 'Add Course', icon: GraduationCap, to: '/academy/courses/new' },
+            { label: 'Add Playbook', icon: FileText, to: '/playbooks/new' },
+            { label: 'Add Store Recipe', icon: Coffee, to: '/store-ops/recipes/new' },
+          ].map(({ label, icon: Icon, to }) => (
+            <button key={to} type="button" onClick={() => navigate(to)} className="flex items-center justify-between rounded-lg border border-[#2A2A2A] bg-[#151515] px-4 py-3 text-left text-sm font-medium text-[#ddd] hover:border-[#D62B2B]/60 hover:bg-[#1F1F1F]">
+              <span className="flex items-center gap-2"><Icon className="text-[#D62B2B]" size={17} />{label}</span>
+              <Plus size={15} className="text-[#777]" />
+            </button>
+          ))}
+          <button type="button" onClick={() => setIssueModalOpen(true)} className="flex items-center justify-between rounded-lg border border-[#2A2A2A] bg-[#151515] px-4 py-3 text-left text-sm font-medium text-[#ddd] hover:border-[#D62B2B]/60 hover:bg-[#1F1F1F]">
+            <span className="flex items-center gap-2"><Award className="text-[#D62B2B]" size={17} />Issue Certification</span>
+            <Plus size={15} className="text-[#777]" />
+          </button>
+        </div>
+      </SectionCard>
+
+      <IssueCertificationModal isOpen={isIssueModalOpen} onClose={() => setIssueModalOpen(false)} />
+    </div>
+  );
+}
