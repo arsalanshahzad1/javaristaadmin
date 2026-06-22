@@ -124,7 +124,6 @@ export function InvestorContentFormPage() {
     handleSubmit,
     reset,
     setValue,
-    getValues,
     formState: { errors },
   } = useForm<FormValues>({ defaultValues: emptyForm });
 
