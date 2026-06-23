@@ -12,7 +12,7 @@ import { IssueCertificationModal } from '../../components/certifications/IssueCe
 
 type TeamMemberPerformance = {
   user: {
-    _id: string;
+    id: string;
     name: string;
     email: string;
   };
@@ -151,7 +151,7 @@ export function TeamPerformancePage() {
   }, [rawData]);
 
   const handleIssue = useCallback((user: TeamMemberPerformance['user']) => {
-    setSelectedUser({ id: user._id, name: user.name });
+    setSelectedUser({ id: user.id, name: user.name });
     setIssueModalOpen(true);
   }, []);
 
@@ -203,7 +203,7 @@ export function TeamPerformancePage() {
       render: (r: TeamMemberPerformance) => (
         <div className="flex items-center gap-2">
           <button
-            onClick={() => navigate(`/performance/user/${r.user._id}`)}
+            onClick={() => navigate(`/performance/user/${r.user.id}`)}
             className="text-xs px-2.5 py-1.5 rounded-lg border border-[#333] text-[#ccc] hover:bg-[#242424] transition-colors whitespace-nowrap cursor-pointer"
           >
             View Full Profile
@@ -299,7 +299,7 @@ export function TeamPerformancePage() {
         <Table
           columns={columns}
           data={filtered}
-          keyExtractor={(r) => r.user._id}
+          keyExtractor={(r) => r.user.id}
           loading={isLoading}
           emptyMessage="No employees match the current filters"
         />
