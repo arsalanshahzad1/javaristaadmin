@@ -14,18 +14,43 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import type { QuizQuestion } from '../../types';
 
 type ApiEnvelope<T> = { success: boolean; message: string; data: T };
+type CourseCategory = 'coffee_foundations' | 'certification' | 'mandatory' | 'recommended' | 'leadership' | 'corporate';
+
 type CourseFormValues = {
   title: string;
   slug: string;
   description: string;
-  category: 'coffee_foundations' | 'certification';
+  category: CourseCategory;
   level: number | null;
   order: number;
   thumbnail: string;
   requiredRole: 'community' | 'investor' | 'employee';
   isActive: boolean;
+  assignedRoles: string[];
+  prerequisites: string[];
+  minReadingMinutes: number;
+  requiresVideoCompletion: boolean;
+  minQuizScore: number;
+  requiresPractical: boolean;
 };
-type Course = CourseFormValues & { _id: string; lessons?: LessonRecord[] };
+type Course = Omit<CourseFormValues, 'assignedRoles' | 'prerequisites'> & {
+  _id: string;
+  lessons?: LessonRecord[];
+  assignedRoles?: string[];
+  prerequisites?: string[];
+  completionRequirements?: {
+    minReadingMinutes?: number;
+    requiresVideoCompletion?: boolean;
+    minQuizScore?: number;
+    requiresPractical?: boolean;
+  };
+};
+
+const ALL_ROLES = [
+  'owner', 'ceo', 'coo', 'cfo', 'regional_manager', 'area_manager',
+  'store_manager', 'assistant_manager', 'shift_supervisor', 'barista',
+  'trainee', 'investor', 'hr_manager', 'marketing_manager',
+];
 
 const emptyCourse: CourseFormValues = {
   title: '',
@@ -37,6 +62,12 @@ const emptyCourse: CourseFormValues = {
   thumbnail: '',
   requiredRole: 'community',
   isActive: true,
+  assignedRoles: [],
+  prerequisites: [],
+  minReadingMinutes: 0,
+  requiresVideoCompletion: false,
+  minQuizScore: 0,
+  requiresPractical: false,
 };
 
 const emptyLesson: LessonFormValues = {
@@ -68,7 +99,19 @@ async function getCourse(id: string) {
 }
 
 async function saveCourse(payload: { id?: string; values: CourseFormValues }) {
-  const body = { ...payload.values, level: payload.values.category === 'certification' ? Number(payload.values.level) : null };
+  const { assignedRoles, prerequisites, minReadingMinutes, requiresVideoCompletion, minQuizScore, requiresPractical, ...rest } = payload.values;
+  const body = {
+    ...rest,
+    level: payload.values.category === 'certification' ? Number(payload.values.level) : null,
+    assignedRoles,
+    prerequisites,
+    completionRequirements: {
+      minReadingMinutes: minReadingMinutes || undefined,
+      requiresVideoCompletion,
+      minQuizScore: minQuizScore || undefined,
+      requiresPractical,
+    },
+  };
   const response = payload.id
     ? await adminApiClient.put<ApiEnvelope<Course>>(`/academy/courses/${payload.id}`, body)
     : await adminApiClient.post<ApiEnvelope<Course>>('/academy/courses', body);
@@ -121,6 +164,12 @@ export function CourseFormPage() {
         thumbnail: courseQuery.data.thumbnail ?? '',
         requiredRole: courseQuery.data.requiredRole,
         isActive: courseQuery.data.isActive,
+        assignedRoles: courseQuery.data.assignedRoles ?? [],
+        prerequisites: courseQuery.data.prerequisites ?? [],
+        minReadingMinutes: courseQuery.data.completionRequirements?.minReadingMinutes ?? 0,
+        requiresVideoCompletion: courseQuery.data.completionRequirements?.requiresVideoCompletion ?? false,
+        minQuizScore: courseQuery.data.completionRequirements?.minQuizScore ?? 0,
+        requiresPractical: courseQuery.data.completionRequirements?.requiresPractical ?? false,
       });
     }
   }, [courseQuery.data, reset]);
@@ -267,6 +316,10 @@ export function CourseFormPage() {
               <select {...register('category')} className={fieldClass()}>
                 <option value="coffee_foundations">Coffee Foundations</option>
                 <option value="certification">Certification</option>
+                <option value="mandatory">Mandatory</option>
+                <option value="recommended">Recommended</option>
+                <option value="leadership">Leadership</option>
+                <option value="corporate">Corporate</option>
               </select>
             </div>
             {category === 'certification' && (
@@ -295,7 +348,54 @@ export function CourseFormPage() {
               <input type="checkbox" {...register('isActive')} className="h-4 w-4 accent-[#D62B2B]" />
               Active
             </label>
+
+            {/* Assigned Roles */}
+            <div className="md:col-span-2">
+              <label className="mb-1.5 block text-sm font-medium text-[#ccc]">Assigned Roles</label>
+              <div className="flex flex-wrap gap-2">
+                {ALL_ROLES.map((role) => {
+                  const assignedRoles = (control._formValues as CourseFormValues).assignedRoles ?? [];
+                  return (
+                    <button
+                      key={role}
+                      type="button"
+                      onClick={() => {
+                        const current = (control._formValues as CourseFormValues).assignedRoles ?? [];
+                        setValue('assignedRoles', current.includes(role) ? current.filter((r: string) => r !== role) : [...current, role]);
+                      }}
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium transition-all ${assignedRoles.includes(role) ? 'bg-[#D62B2B]/20 text-[#D62B2B] ring-1 ring-[#D62B2B]/40' : 'bg-[#222] text-[#888] hover:bg-[#2A2A2A]'}`}
+                    >
+                      {role.replace(/_/g, ' ')}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
+
+          {/* Completion Requirements */}
+          <div className="mt-5 rounded-lg border border-[#2A2A2A] p-4">
+            <h3 className="mb-3 text-sm font-semibold text-[#ccc]">Completion Requirements</h3>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-[#ccc]">Min Reading Minutes</label>
+                <input type="number" min={0} {...register('minReadingMinutes', { valueAsNumber: true })} className={fieldClass()} />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-[#ccc]">Min Quiz Score (0–100)</label>
+                <input type="number" min={0} max={100} {...register('minQuizScore', { valueAsNumber: true })} className={fieldClass()} />
+              </div>
+              <label className="flex items-center gap-2 text-sm font-medium text-[#ccc]">
+                <input type="checkbox" {...register('requiresVideoCompletion')} className="h-4 w-4 accent-[#D62B2B]" />
+                Requires Video Completion
+              </label>
+              <label className="flex items-center gap-2 text-sm font-medium text-[#ccc]">
+                <input type="checkbox" {...register('requiresPractical')} className="h-4 w-4 accent-[#D62B2B]" />
+                Requires Practical
+              </label>
+            </div>
+          </div>
+
           <div className="mt-5 flex justify-end">
             <button type="submit" disabled={courseMutation.isPending} className="rounded-lg bg-[#D62B2B] px-4 py-2 text-sm font-medium text-white hover:bg-[#B92323] disabled:opacity-50">
               {courseMutation.isPending ? 'Saving...' : 'Save Course'}

@@ -21,6 +21,7 @@ type TeamMemberPerformance = {
   approvalRate: number;
   completedCourses: number;
   certifications: number;
+  javaRistaScore?: number;
 };
 
 type ApiEnvelope<T> = {
@@ -70,6 +71,23 @@ function LevelBadge({ level }: { level: number }) {
   );
 }
 
+function ScoreBadge({ score }: { score?: number }) {
+  if (score == null) {
+    return <span className="text-sm text-[#555]">—</span>;
+  }
+  const color =
+    score >= 80
+      ? 'bg-green-900/30 text-green-400'
+      : score >= 60
+        ? 'bg-amber-900/30 text-amber-300'
+        : 'bg-red-900/30 text-red-400';
+  return (
+    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold tabular-nums ${color}`}>
+      {score.toFixed(1)}
+    </span>
+  );
+}
+
 function ApprovalBar({ rate }: { rate: number }) {
   const fill = rate >= 80 ? 'bg-green-500' : rate >= 60 ? 'bg-amber-500' : 'bg-red-500';
   const textColor = rate >= 80 ? 'text-green-400' : rate >= 60 ? 'text-amber-400' : 'text-red-400';
@@ -86,10 +104,10 @@ function ApprovalBar({ rate }: { rate: number }) {
 }
 
 function exportToCsv(rows: TeamMemberPerformance[]) {
-  const headers = ['Name', 'Email', 'Level', 'Courses Completed', 'Certifications', 'Approval Rate (%)', 'Total Brews'];
+  const headers = ['Name', 'Email', 'Level', 'Courses Completed', 'Certifications', 'Approval Rate (%)', 'Score', 'Total Brews'];
   const escape = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
   const lines = rows.map((r) =>
-    [r.user.name, r.user.email, r.currentLevel, r.completedCourses, r.certifications, r.approvalRate.toFixed(1), r.totalBrews]
+    [r.user.name, r.user.email, r.currentLevel, r.completedCourses, r.certifications, r.approvalRate.toFixed(1), r.javaRistaScore?.toFixed(1) ?? '—', r.totalBrews]
       .map(escape)
       .join(',')
   );
@@ -189,6 +207,11 @@ export function TeamPerformancePage() {
       key: 'approvalRate',
       label: 'Approval Rate',
       render: (r: TeamMemberPerformance) => <ApprovalBar rate={r.approvalRate} />,
+    },
+    {
+      key: 'javaRistaScore',
+      label: 'Score',
+      render: (r: TeamMemberPerformance) => <ScoreBadge score={r.javaRistaScore} />,
     },
     {
       key: 'totalBrews',

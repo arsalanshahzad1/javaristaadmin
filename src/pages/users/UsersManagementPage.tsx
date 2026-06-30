@@ -10,7 +10,7 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { Pagination } from '../../components/ui/Pagination';
 import { useDebounce } from '../../hooks/useDebounce';
 
-type Role = 'community' | 'investor' | 'employee' | 'admin';
+type Role = 'owner' | 'ceo' | 'coo' | 'cfo' | 'regional_manager' | 'area_manager' | 'store_manager' | 'assistant_manager' | 'shift_supervisor' | 'barista' | 'trainee' | 'investor' | 'hr_manager' | 'marketing_manager';
 
 type ApiEnvelope<T> = {
   success: boolean;
@@ -28,15 +28,26 @@ type AdminUser = {
   isPremium: boolean;
   isVerified: boolean;
   createdAt: string;
+  investorAccessLevel?: string;
 };
 
-const roles: Role[] = ['community', 'investor', 'employee', 'admin'];
-const premiumRoles = new Set<Role>(['investor', 'employee', 'admin']);
+const roles: Role[] = ['owner', 'ceo', 'coo', 'cfo', 'regional_manager', 'area_manager', 'store_manager', 'assistant_manager', 'shift_supervisor', 'barista', 'trainee', 'investor', 'hr_manager', 'marketing_manager'];
+const premiumRoles = new Set<Role>(['investor', 'owner', 'ceo', 'coo', 'cfo']);
 const roleClasses: Record<Role, string> = {
-  community: 'bg-gray-100 text-gray-700 border-gray-200',
+  owner: 'bg-purple-100 text-purple-700 border-purple-200',
+  ceo: 'bg-purple-100 text-purple-700 border-purple-200',
+  coo: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+  cfo: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+  regional_manager: 'bg-teal-100 text-teal-700 border-teal-200',
+  area_manager: 'bg-teal-100 text-teal-700 border-teal-200',
+  store_manager: 'bg-green-100 text-green-700 border-green-200',
+  assistant_manager: 'bg-green-100 text-green-700 border-green-200',
+  shift_supervisor: 'bg-blue-100 text-blue-700 border-blue-200',
+  barista: 'bg-sky-100 text-sky-700 border-sky-200',
+  trainee: 'bg-gray-100 text-gray-700 border-gray-200',
   investor: 'bg-amber-100 text-amber-700 border-amber-200',
-  employee: 'bg-teal-100 text-teal-700 border-teal-200',
-  admin: 'bg-purple-100 text-purple-700 border-purple-200',
+  hr_manager: 'bg-pink-100 text-pink-700 border-pink-200',
+  marketing_manager: 'bg-orange-100 text-orange-700 border-orange-200',
 };
 
 function getUserId(user: AdminUser) {
@@ -64,10 +75,11 @@ async function getUsers(params: { page: number; limit: number; search?: string; 
   return response.data;
 }
 
-async function updateUserRole(payload: { id: string; role: Role; isPremium: boolean }) {
+async function updateUserRole(payload: { id: string; role: Role; isPremium: boolean; investorAccessLevel?: string }) {
   const response = await adminApiClient.put<ApiEnvelope<AdminUser>>(`/admin/users/${payload.id}/role`, {
     role: payload.role,
     isPremium: payload.isPremium,
+    investorAccessLevel: payload.investorAccessLevel,
   });
   return response.data;
 }
@@ -122,6 +134,7 @@ export function UsersManagementPage() {
   const [role, setRole] = useState<Role | ''>('');
   const [page, setPage] = useState(1);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [editingInvestorLevel, setEditingInvestorLevel] = useState<string>('');
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
   const debouncedSearch = useDebounce(search, 300);
   const limit = 20;
@@ -248,25 +261,56 @@ export function UsersManagementPage() {
                       <td className="px-4 py-3 text-[#bbb]">{user.email}</td>
                       <td className="px-4 py-3">
                         {editingUserId === id ? (
-                          <select
-                            defaultValue={user.role}
-                            disabled={updateRoleMutation.isPending}
-                            onChange={(event) => {
-                              const newRole = event.target.value as Role;
-                              updateRoleMutation.mutate({
-                                id,
-                                role: newRole,
-                                isPremium: premiumRoles.has(newRole),
-                              });
-                            }}
-                            onBlur={() => setEditingUserId(null)}
-                            className="rounded-lg border border-[#333] bg-[#111] px-2 py-1 text-xs text-white outline-none focus:border-[#D62B2B]"
-                            autoFocus
-                          >
-                            {roles.map((option) => <option key={option} value={option}>{formatRole(option)}</option>)}
-                          </select>
+                          <div className="flex flex-col gap-1">
+                            <select
+                              defaultValue={user.role}
+                              disabled={updateRoleMutation.isPending}
+                              onChange={(event) => {
+                                const newRole = event.target.value as Role;
+                                if (newRole !== 'investor') {
+                                  updateRoleMutation.mutate({ id, role: newRole, isPremium: premiumRoles.has(newRole) });
+                                }
+                              }}
+                              onBlur={(event) => {
+                                if ((event.target.value as Role) !== 'investor') setEditingUserId(null);
+                              }}
+                              className="rounded-lg border border-[#333] bg-[#111] px-2 py-1 text-xs text-white outline-none focus:border-[#D62B2B]"
+                              autoFocus
+                            >
+                              {roles.map((option) => <option key={option} value={option}>{formatRole(option)}</option>)}
+                            </select>
+                            {user.role === 'investor' && (
+                              <div className="flex gap-1">
+                                <select
+                                  value={editingInvestorLevel || user.investorAccessLevel || ''}
+                                  onChange={(e) => setEditingInvestorLevel(e.target.value)}
+                                  className="flex-1 rounded border border-[#333] bg-[#111] px-1 py-0.5 text-xs text-white"
+                                >
+                                  <option value="">Community</option>
+                                  <option value="shareholder">Shareholder</option>
+                                  <option value="major_investor">Major Investor</option>
+                                  <option value="board">Board</option>
+                                </select>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    updateRoleMutation.mutate({ id, role: 'investor', isPremium: true, investorAccessLevel: editingInvestorLevel || undefined });
+                                    setEditingUserId(null);
+                                  }}
+                                  className="rounded border border-[#D62B2B] bg-[#D62B2B]/10 px-2 py-0.5 text-xs text-[#D62B2B]"
+                                >
+                                  Save
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         ) : (
-                          <RoleBadge role={user.role} />
+                          <div className="flex flex-col gap-0.5">
+                            <RoleBadge role={user.role} />
+                            {user.role === 'investor' && user.investorAccessLevel && (
+                              <span className="text-xs text-[#777]">{user.investorAccessLevel.replace('_', ' ')}</span>
+                            )}
+                          </div>
                         )}
                       </td>
                       <td className="px-4 py-3"><Badge variant={user.isPremium ? 'success' : 'default'}>{user.isPremium ? 'Premium' : 'Free'}</Badge></td>

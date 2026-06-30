@@ -15,15 +15,37 @@ export interface Lesson {
   questions?: QuizQuestion[];
 }
 
+export type UserRole =
+  | 'community'
+  | 'barista'
+  | 'cashier'
+  | 'kitchen'
+  | 'shift_leader'
+  | 'store_leader'
+  | 'area_manager'
+  | 'operations_manager'
+  | 'operations_director'
+  | 'corporate'
+  | 'investor'
+  | 'employee'
+  | 'admin'
+  | 'super_admin';
+
 export interface User {
   _id: string;
   name: string;
   email: string;
-  role: 'user' | 'admin';
+  role: UserRole;
   avatar?: string;
   isVerified: boolean;
   isPremium: boolean;
   subscriptionStatus: 'none' | 'active' | 'expired' | 'cancelled';
+  storeId?: string;
+  regionId?: string;
+  department?: string;
+  reportingTo?: string;
+  promotionReadiness?: 'ready' | 'needs_training' | 'not_evaluated';
+  javaRistaScore?: number;
   createdAt: string;
   updatedAt: string;
 }

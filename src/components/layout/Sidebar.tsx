@@ -1,22 +1,9 @@
 import { Link, useLocation } from 'react-router-dom';
-import {
-  LayoutDashboard, BarChart2, Users, BookOpen, Coffee,
-  ClipboardList, Zap, CreditCard, Settings, LogOut, Clock,
-} from 'lucide-react';
+import { LogOut, Clock } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { authApi } from '../../api/auth.api';
-
-const nav = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/analytics', icon: BarChart2, label: 'Analytics' },
-  { to: '/users', icon: Users, label: 'Users' },
-  { to: '/recipes', icon: BookOpen, label: 'Recipes' },
-  { to: '/brew-methods', icon: Coffee, label: 'Brew Methods' },
-  { to: '/brew-logs', icon: ClipboardList, label: 'Brew Logs' },
-  { to: '/espresso', icon: Zap, label: 'Espresso' },
-  { to: '/subscriptions', icon: CreditCard, label: 'Subscriptions' },
-  { to: '/settings', icon: Settings, label: 'Settings' },
-];
+import { navSections, canSeeItem } from '../../config/navigation.config';
+import type { UserRole } from '../../types';
 
 export function Sidebar() {
   const { user, logout } = useAuth();
@@ -28,9 +15,20 @@ export function Sidebar() {
   };
 
   const isRouteActive = (to: string) => {
-    if (to === '/') return location.pathname === '/';
+    if (to === '/dashboard') {
+      return location.pathname === '/dashboard' || location.pathname === '/';
+    }
     return location.pathname === to || location.pathname.startsWith(`${to}/`);
   };
+
+  const userRole = user?.role as UserRole | undefined;
+
+  const visibleSections = navSections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => canSeeItem(item, userRole)),
+    }))
+    .filter((section) => section.items.length > 0);
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-60 bg-[#1A1A1A] border-r border-[#2A2A2A] flex flex-col z-20">
@@ -47,26 +45,33 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 px-3 py-4 overflow-y-auto">
-        <ul className="flex flex-col gap-0.5">
-          {nav.map(({ to, icon: Icon, label }) => (
-            <li key={to}>
-              <Link
-                to={to}
-                className={`relative flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                  isRouteActive(to)
-                    ? 'bg-[#D62B2B]/10 text-[#D62B2B]'
-                    : 'text-[#666] hover:text-white hover:bg-[#242424]'
-                }`}
-              >
-                <Icon size={16} />
-                {label}
-                {isRouteActive(to) && (
-                  <span className="absolute right-0 top-1.5 bottom-1.5 w-0.5 bg-[#D62B2B] rounded-l" />
-                )}
-              </Link>
-            </li>
-          ))}
-        </ul>
+        {visibleSections.map((section) => (
+          <div key={section.title} className="mb-3">
+            <div className="px-3 pb-1.5 text-[10px] font-semibold text-[#444] uppercase tracking-widest">
+              {section.title}
+            </div>
+            <ul className="flex flex-col gap-0.5">
+              {section.items.map(({ to, icon: Icon, label }) => (
+                <li key={to}>
+                  <Link
+                    to={to}
+                    className={`relative flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                      isRouteActive(to)
+                        ? 'bg-[#D62B2B]/10 text-[#D62B2B]'
+                        : 'text-[#666] hover:text-white hover:bg-[#242424]'
+                    }`}
+                  >
+                    <Icon size={16} />
+                    {label}
+                    {isRouteActive(to) && (
+                      <span className="absolute right-0 top-1.5 bottom-1.5 w-0.5 bg-[#D62B2B] rounded-l" />
+                    )}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
       </nav>
 
       <div className="px-3 py-4 border-t border-[#2A2A2A] space-y-1">

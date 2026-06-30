@@ -43,8 +43,8 @@ const certificationTypes = [
   { value: 'javarista_level_3', label: 'JavaRista Level 3' },
   { value: 'javarista_level_4', label: 'JavaRista Level 4' },
   { value: 'javarista_level_5', label: 'JavaRista Level 5' },
-  { value: 'shift_leader', label: 'Shift Leader' },
-  { value: 'store_leader', label: 'Store Leader' },
+  { value: 'shift_supervisor', label: 'Shift Supervisor' },
+  { value: 'store_manager', label: 'Store Manager' },
   { value: 'java_champion', label: 'Java Champion' },
 ];
 

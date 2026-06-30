@@ -3,7 +3,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, GraduationCap, BookOpen, ShoppingBag, Lock,
   ClipboardList, Award, Users, BarChart2, MessageCircle,
-  Clock, LogOut, ChevronLeft, ChevronRight, Settings,
+  Clock, LogOut, ChevronLeft, ChevronRight, Settings, Network, GitPullRequest,
 } from 'lucide-react';
 import { adminAuthStorage } from '../../api/adminAuthStorage';
 import { useAuth } from '../../hooks/useAuth';
@@ -50,6 +50,14 @@ const navSections: NavSection[] = [
     items: [
       { to: '/users', icon: Users, label: 'Users & Roles' },
       { to: '/team-performance', icon: BarChart2, label: 'Team Performance' },
+      { to: '/region/dashboard', icon: BarChart2, label: 'Region Dashboard' },
+    ],
+  },
+  {
+    title: 'ORGANISATION',
+    items: [
+      { to: '/org/chart', icon: Network, label: 'Org Chart' },
+      { to: '/org/role-changes', icon: GitPullRequest, label: 'Role Requests' },
     ],
   },
   {

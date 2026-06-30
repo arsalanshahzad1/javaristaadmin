@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Edit, Eye, Plus, RefreshCw } from 'lucide-react';
+import { BookOpen, Edit, Eye, GitBranch, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { AxiosError } from 'axios';
 import adminApiClient from '../../api/adminApiClient';
 import { Badge } from '../../components/ui/Badge';
+import { LearningPathFormModal } from './components/LearningPathFormModal';
 
 type ApiEnvelope<T> = {
   success: boolean;
@@ -41,6 +42,45 @@ type Enrollment = {
   enrolledAt: string;
   completedAt?: string | null;
 };
+
+type PathCategory = 'mandatory' | 'recommended' | 'leadership' | 'certification' | 'corporate';
+type LearningPath = {
+  _id: string;
+  title: string;
+  description?: string;
+  category: PathCategory;
+  targetRoles: string[];
+  targetStores?: string[];
+  courses: unknown[];
+  prerequisites: string[];
+  estimatedWeeks?: number;
+  isActive: boolean;
+  enrollmentCount: number;
+  completionRate: number;
+};
+
+const PATH_CATEGORY_COLORS: Record<PathCategory, string> = {
+  mandatory: 'bg-red-900/40 text-red-300',
+  recommended: 'bg-blue-900/40 text-blue-300',
+  leadership: 'bg-purple-900/40 text-purple-300',
+  certification: 'bg-amber-900/40 text-amber-300',
+  corporate: 'bg-teal-900/40 text-teal-300',
+};
+
+async function getPaths() {
+  const response = await adminApiClient.get<ApiEnvelope<LearningPath[]>>('/academy/paths');
+  return response.data.data;
+}
+
+async function updatePath(payload: { id: string; isActive: boolean }) {
+  const response = await adminApiClient.put<ApiEnvelope<LearningPath>>(`/academy/paths/${payload.id}`, { isActive: payload.isActive });
+  return response.data;
+}
+
+async function deletePath(id: string) {
+  const response = await adminApiClient.delete<ApiEnvelope<unknown>>(`/academy/paths/${id}`);
+  return response.data;
+}
 
 function getErrorMessage(error: unknown) {
   return (error as AxiosError<ApiEnvelope<unknown>>).response?.data?.message || 'Something went wrong';
@@ -100,14 +140,20 @@ function SectionError({ message, onRetry }: { message: string; onRetry: () => vo
 export function AcademyPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'courses' | 'enrollments'>('courses');
+  const [activeTab, setActiveTab] = useState<'courses' | 'enrollments' | 'paths'>('courses');
   const [courseFilter, setCourseFilter] = useState('');
+  const [pathModal, setPathModal] = useState<LearningPath | null | 'new'>(null);
 
   const coursesQuery = useQuery({ queryKey: ['academy-courses'], queryFn: getCourses });
   const enrollmentsQuery = useQuery({
     queryKey: ['academy-enrollments', courseFilter],
     queryFn: () => getEnrollments(courseFilter),
     enabled: activeTab === 'enrollments',
+  });
+  const pathsQuery = useQuery({
+    queryKey: ['academy-paths'],
+    queryFn: getPaths,
+    enabled: activeTab === 'paths',
   });
 
   const toggleMutation = useMutation({
@@ -120,6 +166,24 @@ export function AcademyPage() {
     onError: (error) => toast.error(getErrorMessage(error)),
   });
 
+  const pathToggleMutation = useMutation({
+    mutationFn: updatePath,
+    onSuccess: (response) => {
+      toast.success(response.message || 'Path updated');
+      queryClient.invalidateQueries({ queryKey: ['academy-paths'] });
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  });
+
+  const pathDeleteMutation = useMutation({
+    mutationFn: deletePath,
+    onSuccess: () => {
+      toast.success('Learning path deleted');
+      queryClient.invalidateQueries({ queryKey: ['academy-paths'] });
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -127,21 +191,29 @@ export function AcademyPage() {
           <h1 className="text-2xl font-bold text-white">Java Academy</h1>
           <p className="mt-1 text-sm text-[#777]">Manage courses, lessons, and enrollments.</p>
         </div>
-        <button type="button" onClick={() => navigate('/academy/courses/new')} className="inline-flex items-center gap-2 rounded-lg bg-[#D62B2B] px-4 py-2 text-sm font-medium text-white hover:bg-[#B92323]">
-          <Plus size={16} />
-          New Course
-        </button>
+        {activeTab === 'paths' ? (
+          <button type="button" onClick={() => setPathModal('new')} className="inline-flex items-center gap-2 rounded-lg bg-[#D62B2B] px-4 py-2 text-sm font-medium text-white hover:bg-[#B92323]">
+            <Plus size={16} />
+            New Path
+          </button>
+        ) : (
+          <button type="button" onClick={() => navigate('/academy/courses/new')} className="inline-flex items-center gap-2 rounded-lg bg-[#D62B2B] px-4 py-2 text-sm font-medium text-white hover:bg-[#B92323]">
+            <Plus size={16} />
+            New Course
+          </button>
+        )}
       </div>
 
       <div className="flex gap-2 border-b border-[#2A2A2A]">
         {[
           { id: 'courses', label: 'Courses' },
           { id: 'enrollments', label: 'Enrollments' },
+          { id: 'paths', label: 'Learning Paths' },
         ].map((tab) => (
           <button
             key={tab.id}
             type="button"
-            onClick={() => setActiveTab(tab.id as 'courses' | 'enrollments')}
+            onClick={() => setActiveTab(tab.id as 'courses' | 'enrollments' | 'paths')}
             className={`border-b-2 px-4 py-3 text-sm font-medium ${activeTab === tab.id ? 'border-[#D62B2B] text-white' : 'border-transparent text-[#777] hover:text-white'}`}
           >
             {tab.label}
@@ -202,6 +274,50 @@ export function AcademyPage() {
               </table>
             </div>
           )
+        ) : activeTab === 'paths' ? (
+          pathsQuery.isError ? (
+            <div className="p-5"><SectionError message={getErrorMessage(pathsQuery.error)} onRetry={() => pathsQuery.refetch()} /></div>
+          ) : (
+            <div className="p-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {pathsQuery.isLoading ? (
+                [0,1,2].map((i) => <div key={i} className="h-48 animate-pulse rounded-xl bg-[#242424]" />)
+              ) : (pathsQuery.data ?? []).length === 0 ? (
+                <div className="col-span-full py-12 text-center">
+                  <GitBranch className="mx-auto mb-3 text-[#555]" size={30} />
+                  <p className="text-sm text-[#777]">No learning paths yet</p>
+                </div>
+              ) : (pathsQuery.data ?? []).map((path) => (
+                <div key={path._id} className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-4 flex flex-col gap-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="text-sm font-semibold text-white leading-snug">{path.title}</h3>
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${PATH_CATEGORY_COLORS[path.category] ?? 'bg-[#222] text-[#888]'}`}>
+                      {path.category}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {(path.targetRoles ?? []).slice(0, 4).map((r) => (
+                      <span key={r} className="rounded-full bg-[#1A1A1A] px-2 py-0.5 text-xs text-[#aaa] border border-[#333]">{r.replace(/_/g, ' ')}</span>
+                    ))}
+                    {(path.targetRoles ?? []).length > 4 && <span className="text-xs text-[#555]">+{path.targetRoles.length - 4} more</span>}
+                  </div>
+                  <div className="flex items-center gap-4 text-xs text-[#666]">
+                    <span>{path.courses?.length ?? 0} courses</span>
+                    {path.estimatedWeeks && <span>{path.estimatedWeeks}w</span>}
+                    <span>{path.enrollmentCount ?? 0} enrolled</span>
+                    <span>{path.completionRate ?? 0}% complete</span>
+                  </div>
+                  <div className="flex items-center justify-between pt-1 border-t border-[#2A2A2A]">
+                    <Badge variant={path.isActive ? 'success' : 'default'}>{path.isActive ? 'Active' : 'Inactive'}</Badge>
+                    <div className="flex gap-1.5">
+                      <button type="button" onClick={() => setPathModal(path)} className="inline-flex items-center gap-1 rounded-lg border border-[#333] px-2.5 py-1 text-xs text-[#ddd] hover:bg-[#242424]"><Edit size={11} /> Edit</button>
+                      <button type="button" disabled={pathToggleMutation.isPending} onClick={() => pathToggleMutation.mutate({ id: path._id, isActive: !path.isActive })} className="inline-flex items-center gap-1 rounded-lg border border-[#333] px-2.5 py-1 text-xs text-[#ddd] hover:bg-[#242424] disabled:opacity-50"><RefreshCw size={11} /></button>
+                      <button type="button" onClick={() => pathDeleteMutation.mutate(path._id)} className="inline-flex items-center gap-1 rounded-lg border border-red-900/60 px-2.5 py-1 text-xs text-red-300 hover:bg-red-900/20"><Trash2 size={11} /></button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
         ) : (
           <div>
             <div className="border-b border-[#2A2A2A] p-4">
@@ -243,6 +359,13 @@ export function AcademyPage() {
           </div>
         )}
       </section>
+
+      {(pathModal === 'new' || (pathModal && pathModal !== 'new')) && (
+        <LearningPathFormModal
+          editing={pathModal === 'new' ? null : pathModal}
+          onClose={() => setPathModal(null)}
+        />
+      )}
     </div>
   );
 }

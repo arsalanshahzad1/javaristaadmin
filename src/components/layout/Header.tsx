@@ -1,8 +1,9 @@
 import { useLocation } from 'react-router-dom';
-import { Bell, ChevronDown, User, Lock, LogOut } from 'lucide-react';
+import { ChevronDown, User, Lock, LogOut } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useAuth } from '../../hooks/useAuth';
 import { authApi } from '../../api/auth.api';
+import { NotificationBell } from './NotificationBell';
 
 const pageTitles: Record<string, string> = {
   '/': 'Dashboard',
@@ -41,9 +42,7 @@ export function Header() {
       <h2 className="text-sm font-medium text-white">{title}</h2>
 
       <div className="flex items-center gap-4">
-        <button className="text-[#666] hover:text-white transition-colors cursor-pointer">
-          <Bell size={18} />
-        </button>
+        <NotificationBell />
 
         <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>

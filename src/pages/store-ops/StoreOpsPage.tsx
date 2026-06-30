@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Clock, Edit, Plus, RefreshCw, Search } from 'lucide-react';
+import { Award, Camera, Clock, Edit, Plus, RefreshCw, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Badge } from '../../components/ui/Badge';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -39,19 +39,27 @@ function RecipeSkeletonGrid() {
   );
 }
 
-function RecipeCard({ recipe, onEdit, onToggle, isToggling }: {
+function RecipeCard({ recipe, onEdit, onDetail, onToggle, isToggling }: {
   recipe: StoreRecipe;
   onEdit: () => void;
+  onDetail: () => void;
   onToggle: () => void;
   isToggling: boolean;
 }) {
   const preview = recipe.buildOrder?.[0] || 'No build steps added yet.';
+  const qualityPhotoCount = recipe.qualityPhotos?.length ?? 0;
 
   return (
     <article className="flex min-h-56 flex-col rounded-lg border border-[#2A2A2A] bg-[#1A1A1A] p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="truncate text-base font-semibold text-white">{recipe.name}</h2>
+          <button
+            type="button"
+            onClick={onDetail}
+            className="truncate text-base font-semibold text-white hover:text-[#D62B2B] text-left"
+          >
+            {recipe.name}
+          </button>
           <p className="mt-1 truncate text-xs text-[#666]">{recipe.slug}</p>
         </div>
         <Badge variant={recipe.isActive ? 'success' : 'default'}>{recipe.isActive ? 'Active' : 'Inactive'}</Badge>
@@ -63,6 +71,22 @@ function RecipeCard({ recipe, onEdit, onToggle, isToggling }: {
           <Clock size={12} />
           {recipe.targetPrepTimeSeconds ? `${recipe.targetPrepTimeSeconds}s` : 'No target'}
         </span>
+        {recipe.stationAssignment && (
+          <span className="rounded border border-[#2A2A2A] bg-[#222] px-2 py-0.5 text-xs text-[#888]">{recipe.stationAssignment}</span>
+        )}
+        {recipe.version && (
+          <span className="rounded bg-[#1E1E1E] px-1.5 py-0.5 text-xs text-[#555]">v{recipe.version}</span>
+        )}
+        {qualityPhotoCount > 0 && (
+          <span className="inline-flex items-center gap-1 rounded border border-blue-900/40 bg-blue-900/10 px-2 py-0.5 text-xs text-blue-400">
+            <Camera size={10} /> {qualityPhotoCount} QC
+          </span>
+        )}
+        {recipe.certificationRequired && (
+          <span className="inline-flex items-center gap-1 rounded border border-yellow-900/40 bg-yellow-900/10 px-2 py-0.5 text-xs text-yellow-400">
+            <Award size={10} /> Cert Required
+          </span>
+        )}
       </div>
 
       <div className="mt-4 flex-1 rounded-lg border border-[#262626] bg-[#111] p-3">
@@ -158,6 +182,7 @@ export function StoreOpsPage() {
             <RecipeCard
               key={recipe._id}
               recipe={recipe}
+              onDetail={() => navigate(`/store-ops/recipes/${recipe.slug}/detail`)}
               onEdit={() => navigate(`/store-ops/recipes/${recipe.slug}/edit`)}
               onToggle={() => toggleMutation.mutate(recipe)}
               isToggling={toggleMutation.isPending}

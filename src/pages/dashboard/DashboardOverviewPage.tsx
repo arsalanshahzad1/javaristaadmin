@@ -9,6 +9,9 @@ import adminApiClient from '../../api/adminApiClient';
 import { Badge } from '../../components/ui/Badge';
 import { StatCard } from '../../components/ui/StatCard';
 import { IssueCertificationModal } from '../../components/certifications/IssueCertificationModal';
+import { useDashboardMetrics } from '../../hooks/useDashboardMetrics';
+import { useAuth } from '../../hooks/useAuth';
+import type { StoreReadiness } from '../../api/metrics.api';
 
 type ApiEnvelope<T> = {
   success: boolean;
@@ -35,6 +38,17 @@ type CommunityShare = {
   user?: { name?: string };
   brewLog?: { rating?: number; tasteNotes?: string; brewMethod?: { name?: string } };
 };
+
+const MANAGEMENT_ROLES = new Set([
+  'area_manager',
+  'regional_manager',
+  'coo',
+  'cfo',
+  'ceo',
+  'owner',
+  'hr_manager',
+  'marketing_manager',
+]);
 
 const statusVariant: Record<string, 'success' | 'warning' | 'danger' | 'info' | 'default'> = {
   in_progress: 'warning',
@@ -79,6 +93,12 @@ function formatStatus(status: string) {
   return status.split('_').map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
 }
 
+function complianceColor(percent: number): string {
+  if (percent >= 80) return '#22C55E';
+  if (percent >= 60) return '#F59E0B';
+  return '#EF4444';
+}
+
 function SkeletonBlock({ className = '' }: { className?: string }) {
   return <div className={`animate-pulse rounded-lg bg-[#242424] ${className}`} />;
 }
@@ -94,10 +114,13 @@ function SectionError({ message, onRetry }: { message: string; onRetry: () => vo
   );
 }
 
-function SectionCard({ title, children }: { title: string; children: ReactNode }) {
+function SectionCard({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
   return (
     <section className="rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] p-5">
-      <h2 className="mb-4 text-base font-semibold text-white">{title}</h2>
+      <div className="mb-4">
+        <h2 className="text-base font-semibold text-white">{title}</h2>
+        {subtitle && <p className="mt-0.5 text-xs text-[#666]">{subtitle}</p>}
+      </div>
       {children}
     </section>
   );
@@ -108,15 +131,116 @@ function getTeamList(teamData: TeamPerformance[] | { users?: TeamPerformance[]; 
   return teamData?.users ?? teamData?.team ?? [];
 }
 
+function KpiComplianceCard({
+  title,
+  percent,
+  subtitle,
+  isLoading,
+}: {
+  title: string;
+  percent: number;
+  subtitle: string;
+  isLoading: boolean;
+}) {
+  const color = complianceColor(percent);
+
+  if (isLoading) return <SkeletonBlock className="h-32" />;
+
+  return (
+    <div className="rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] p-5">
+      <p className="mb-1 text-xs text-[#666]">{title}</p>
+      <p className="text-3xl font-bold leading-none" style={{ color }}>
+        {percent}%
+      </p>
+      <p className="mt-1.5 text-xs text-[#888]">{subtitle}</p>
+      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#2A2A2A]">
+        <div
+          className="h-full rounded-full transition-all duration-500"
+          style={{ width: `${percent}%`, backgroundColor: color }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function KpiScoreCard({
+  title,
+  score,
+  subtitle,
+  isLoading,
+}: {
+  title: string;
+  score: number;
+  subtitle: string;
+  isLoading: boolean;
+}) {
+  const color = complianceColor(score);
+  if (isLoading) return <SkeletonBlock className="h-32" />;
+
+  return (
+    <div className="rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] p-5">
+      <p className="mb-1 text-xs text-[#666]">{title}</p>
+      <p className="text-3xl font-bold leading-none" style={{ color }}>
+        {score} <span className="text-base font-normal text-[#555]">/ 100</span>
+      </p>
+      <p className="mt-1.5 text-xs text-[#888]">{subtitle}</p>
+    </div>
+  );
+}
+
+function KpiEmployeeCard({
+  count,
+  isLoading,
+}: {
+  count: number;
+  isLoading: boolean;
+}) {
+  if (isLoading) return <SkeletonBlock className="h-32" />;
+
+  return (
+    <div className="rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] p-5">
+      <p className="mb-1 text-xs text-[#666]">Total Employees</p>
+      <p className="text-3xl font-bold leading-none text-white">{count.toLocaleString()}</p>
+      <p className="mt-1.5 text-xs text-[#888]">Active staff</p>
+    </div>
+  );
+}
+
+function StoreReadinessRow({ store }: { store: StoreReadiness }) {
+  const color = complianceColor(store.readinessPercent);
+  return (
+    <div className="flex items-center gap-3 py-2">
+      <span className="w-32 shrink-0 truncate text-sm text-[#ccc]">{store.storeName}</span>
+      <div className="flex-1 overflow-hidden rounded-full bg-[#2A2A2A]" style={{ height: 6 }}>
+        <div
+          className="h-full rounded-full transition-all duration-500"
+          style={{ width: `${store.readinessPercent}%`, backgroundColor: color }}
+        />
+      </div>
+      <span className="w-10 shrink-0 text-right text-sm font-semibold" style={{ color }}>
+        {store.readinessPercent}%
+      </span>
+      <span className="shrink-0 rounded-full bg-[#2A2A2A] px-2 py-0.5 text-xs text-[#888]">
+        {store.employeeCount} staff
+      </span>
+    </div>
+  );
+}
+
 export function DashboardOverviewPage() {
   const navigate = useNavigate();
   const [isIssueModalOpen, setIssueModalOpen] = useState(false);
+  const { user } = useAuth();
+
+  const isManagement = user?.role != null && MANAGEMENT_ROLES.has(user.role);
 
   const brewStatsQuery = useQuery({ queryKey: ['dashboard-brew-stats'], queryFn: getBrewStats });
   const coursesQuery = useQuery({ queryKey: ['dashboard-academy-courses'], queryFn: getCourses });
   const teamQuery = useQuery({ queryKey: ['dashboard-team-performance'], queryFn: getTeamPerformance });
   const checklistQuery = useQuery({ queryKey: ['dashboard-recent-checklist-submissions'], queryFn: getRecentChecklistSubmissions });
   const communityQuery = useQuery({ queryKey: ['dashboard-recent-community-shares'], queryFn: getRecentCommunityShares });
+
+  const { metrics, isLoading: metricsLoading, error: metricsError, refetch: refetchMetrics } = useDashboardMetrics();
 
   const teamMembers = useMemo(() => getTeamList(teamQuery.data), [teamQuery.data]);
   const certificationsIssued = teamMembers.reduce((sum, member) => sum + (member.certifications?.total ?? member.certifications?.list?.length ?? 0), 0);
@@ -130,6 +254,39 @@ export function DashboardOverviewPage() {
         <h1 className="text-2xl font-bold text-white">Dashboard</h1>
         <p className="mt-1 text-sm text-[#777]">Overview of JavaRista learning, operations, and community activity.</p>
       </div>
+
+      {isManagement && (
+        <>
+          {metricsError ? (
+            <SectionError message={metricsError} onRetry={refetchMetrics} />
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <KpiComplianceCard
+                title="Training Compliance"
+                percent={metrics?.trainingCompliance.percent ?? 0}
+                subtitle={`${metrics?.trainingCompliance.completed ?? 0} / ${metrics?.trainingCompliance.total ?? 0} employees`}
+                isLoading={metricsLoading}
+              />
+              <KpiComplianceCard
+                title="Manual Compliance"
+                percent={metrics?.manualCompliance.percent ?? 0}
+                subtitle={`${metrics?.manualCompliance.read ?? 0} / ${metrics?.manualCompliance.total ?? 0} manuals read`}
+                isLoading={metricsLoading}
+              />
+              <KpiScoreCard
+                title="Avg JavaRista Score"
+                score={metrics?.avgJavaRistaScore ?? 0}
+                subtitle="Company average"
+                isLoading={metricsLoading}
+              />
+              <KpiEmployeeCard
+                count={metrics?.totalEmployees ?? 0}
+                isLoading={metricsLoading}
+              />
+            </div>
+          )}
+        </>
+      )}
 
       {statsError ? (
         <SectionError message={getErrorMessage(statsError)} onRetry={() => { brewStatsQuery.refetch(); coursesQuery.refetch(); teamQuery.refetch(); }} />
@@ -203,6 +360,29 @@ export function DashboardOverviewPage() {
           )}
         </SectionCard>
       </div>
+
+      {isManagement && (
+        <SectionCard
+          title="Store Readiness"
+          subtitle="Operational readiness by location"
+        >
+          {metricsLoading ? (
+            <div className="space-y-3">{[0, 1, 2].map((i) => <SkeletonBlock key={i} className="h-8" />)}</div>
+          ) : metricsError ? (
+            <SectionError message={metricsError} onRetry={refetchMetrics} />
+          ) : (metrics?.storeReadiness ?? []).length === 0 ? (
+            <p className="py-6 text-center text-sm text-[#666]">
+              Store readiness data will appear once employees are assigned to stores.
+            </p>
+          ) : (
+            <div className="divide-y divide-[#2A2A2A]">
+              {(metrics?.storeReadiness ?? []).map((store) => (
+                <StoreReadinessRow key={store.storeId} store={store} />
+              ))}
+            </div>
+          )}
+        </SectionCard>
+      )}
 
       <SectionCard title="Quick Actions">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
