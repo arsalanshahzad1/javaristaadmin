@@ -14,6 +14,7 @@ import { EspressoPage } from '../pages/espresso/EspressoPage';
 import { SubscriptionsPage } from '../pages/subscriptions/SubscriptionsPage';
 import { AnalyticsPage } from '../pages/analytics/AnalyticsPage';
 import { SettingsPage } from '../pages/settings/SettingsPage';
+import { EmployeeRolesPage } from '../pages/employee-roles/EmployeeRolesPage';
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -27,6 +28,7 @@ export const router = createBrowserRouter([
           { path: '/analytics', element: <AnalyticsPage /> },
           { path: '/users', element: <UsersPage /> },
           { path: '/users/:id', element: <UserDetailPage /> },
+          { path: '/employee-roles', element: <EmployeeRolesPage /> },
           { path: '/recipes', element: <RecipesPage /> },
           { path: '/recipes/new', element: <RecipeFormPage /> },
           { path: '/recipes/:id/edit', element: <RecipeFormPage /> },

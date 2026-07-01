@@ -5,10 +5,12 @@ import { Download, Search, ShieldCheck, Trash2, UserCog, Activity } from 'lucide
 import toast from 'react-hot-toast';
 import type { AxiosError } from 'axios';
 import adminApiClient from '../../api/adminApiClient';
+import { employeeRolesApi } from '../../api/employeeRoles.api';
 import { Badge } from '../../components/ui/Badge';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { Pagination } from '../../components/ui/Pagination';
 import { useDebounce } from '../../hooks/useDebounce';
+import { EMPLOYEE_TIER_ROLES } from '../../types';
 
 type Role = 'owner' | 'ceo' | 'coo' | 'cfo' | 'regional_manager' | 'area_manager' | 'store_manager' | 'assistant_manager' | 'shift_supervisor' | 'barista' | 'trainee' | 'investor' | 'hr_manager' | 'marketing_manager';
 
@@ -29,6 +31,7 @@ type AdminUser = {
   isVerified: boolean;
   createdAt: string;
   investorAccessLevel?: string;
+  employeeRoleId?: string | null;
 };
 
 const roles: Role[] = ['owner', 'ceo', 'coo', 'cfo', 'regional_manager', 'area_manager', 'store_manager', 'assistant_manager', 'shift_supervisor', 'barista', 'trainee', 'investor', 'hr_manager', 'marketing_manager'];
@@ -75,11 +78,18 @@ async function getUsers(params: { page: number; limit: number; search?: string; 
   return response.data;
 }
 
-async function updateUserRole(payload: { id: string; role: Role; isPremium: boolean; investorAccessLevel?: string }) {
+async function updateUserRole(payload: {
+  id: string;
+  role: Role;
+  isPremium: boolean;
+  investorAccessLevel?: string;
+  employeeRoleId?: string | null;
+}) {
   const response = await adminApiClient.put<ApiEnvelope<AdminUser>>(`/admin/users/${payload.id}/role`, {
     role: payload.role,
     isPremium: payload.isPremium,
     investorAccessLevel: payload.investorAccessLevel,
+    employeeRoleId: payload.employeeRoleId,
   });
   return response.data;
 }
@@ -135,9 +145,16 @@ export function UsersManagementPage() {
   const [page, setPage] = useState(1);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [editingInvestorLevel, setEditingInvestorLevel] = useState<string>('');
+  const [editingEmployeeRoleId, setEditingEmployeeRoleId] = useState<string>('');
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
   const debouncedSearch = useDebounce(search, 300);
   const limit = 20;
+
+  const employeeRolesQuery = useQuery({
+    queryKey: ['employee-roles-list'],
+    queryFn: () => employeeRolesApi.list().then((r) => r.data.data),
+    staleTime: 60_000,
+  });
 
   const usersQuery = useQuery({
     queryKey: ['admin-users', page, limit, debouncedSearch, role],
@@ -239,6 +256,7 @@ export function UsersManagementPage() {
                   <th className="px-4 py-3 font-medium">Name</th>
                   <th className="px-4 py-3 font-medium">Email</th>
                   <th className="px-4 py-3 font-medium">Role</th>
+                  <th className="px-4 py-3 font-medium">Employee Role</th>
                   <th className="px-4 py-3 font-medium">Premium</th>
                   <th className="px-4 py-3 font-medium">Verified</th>
                   <th className="px-4 py-3 font-medium">Joined date</th>
@@ -248,7 +266,7 @@ export function UsersManagementPage() {
               <tbody>
                 {usersQuery.isLoading ? <SkeletonRows /> : users.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-12 text-center">
+                    <td colSpan={8} className="px-4 py-12 text-center">
                       <UserCog className="mx-auto mb-3 text-[#555]" size={30} />
                       <p className="text-sm text-[#777]">No users found</p>
                     </td>
@@ -313,6 +331,33 @@ export function UsersManagementPage() {
                           </div>
                         )}
                       </td>
+                      {/* Employee Role assignment — only relevant for employee-tier users */}
+                      <td className="px-4 py-3">
+                        {(EMPLOYEE_TIER_ROLES as string[]).includes(user.role) ? (
+                          <select
+                            value={editingUserId === id ? (editingEmployeeRoleId || user.employeeRoleId || '') : (user.employeeRoleId || '')}
+                            disabled={updateRoleMutation.isPending}
+                            onChange={(e) => {
+                              const newRoleId = e.target.value || null;
+                              setEditingEmployeeRoleId(e.target.value);
+                              updateRoleMutation.mutate({
+                                id,
+                                role: user.role,
+                                isPremium: premiumRoles.has(user.role),
+                                employeeRoleId: newRoleId,
+                              });
+                            }}
+                            className="rounded-lg border border-[#333] bg-[#111] px-2 py-1 text-xs text-white outline-none focus:border-[#D62B2B] max-w-[160px]"
+                          >
+                            <option value="">— unassigned —</option>
+                            {(employeeRolesQuery.data ?? []).map((er) => (
+                              <option key={er._id} value={er._id}>{er.name}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="text-xs text-[#555]">—</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3"><Badge variant={user.isPremium ? 'success' : 'default'}>{user.isPremium ? 'Premium' : 'Free'}</Badge></td>
                       <td className="px-4 py-3 text-[#bbb]">{user.isVerified ? <ShieldCheck className="text-green-400" size={18} /> : 'No'}</td>
                       <td className="px-4 py-3 text-[#999]">{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '-'}</td>
@@ -321,7 +366,7 @@ export function UsersManagementPage() {
                           <button type="button" onClick={() => setEditingUserId(id)} className="rounded-lg border border-[#333] px-3 py-1.5 text-xs font-medium text-[#ddd] hover:bg-[#242424]">
                             Change Role
                           </button>
-                          {user.role === 'employee' && (
+                          {(EMPLOYEE_TIER_ROLES as string[]).includes(user.role) && (
                             <button type="button" onClick={() => navigate(`/performance/user/${id}`)} className="inline-flex items-center gap-1 rounded-lg border border-[#333] px-3 py-1.5 text-xs font-medium text-[#ddd] hover:bg-[#242424]">
                               <Activity size={13} />
                               View Performance

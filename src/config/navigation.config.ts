@@ -10,21 +10,17 @@ import {
   MessageSquare,
   Package,
   Settings,
+  ShieldCheck,
   TrendingUp,
   Users,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { UserRole } from '../types';
+import { ADMIN_ROLES } from '../types';
 
-// Mirror the Flutter RoleGuard group constants exactly
-const storeStaff: UserRole[] = [
-  'barista', 'cashier', 'kitchen', 'shift_leader', 'store_leader',
-  'employee', // kept for backward compatibility
-];
 const management: UserRole[] = [
-  'area_manager', 'operations_manager', 'operations_director', 'corporate',
+  'owner', 'ceo', 'coo', 'cfo', 'regional_manager', 'area_manager', 'hr_manager', 'marketing_manager',
 ];
-const adminLevel: UserRole[] = ['admin', 'super_admin'];
 
 export interface NavItem {
   to: string;
@@ -54,57 +50,27 @@ export const navSections: NavSection[] = [
   {
     title: 'CONTENT',
     items: [
-      { to: '/java-academy', label: 'Java Academy', icon: GraduationCap, allowedRoles: 'all' },
-      { to: '/role-manuals', label: 'Role Manuals', icon: BookMarked, allowedRoles: 'all' },
-      { to: '/playbooks', label: 'Playbooks', icon: BookOpen, allowedRoles: 'all' },
-      {
-        to: '/store-ops',
-        label: 'Store Operations',
-        icon: Package,
-        allowedRoles: [...storeStaff, ...management, ...adminLevel],
-      },
-      {
-        to: '/investor-content',
-        label: 'Investor Content',
-        icon: TrendingUp,
-        allowedRoles: ['investor', ...adminLevel],
-      },
+      { to: '/java-academy',     label: 'Java Academy',      icon: GraduationCap, allowedRoles: 'all' },
+      { to: '/role-manuals',     label: 'Role Manuals',       icon: BookMarked,    allowedRoles: 'all' },
+      { to: '/playbooks',        label: 'Playbooks',          icon: BookOpen,      allowedRoles: 'all' },
+      { to: '/store-ops',        label: 'Store Operations',   icon: Package,       allowedRoles: management },
+      { to: '/investor-content', label: 'Investor Content',   icon: TrendingUp,    allowedRoles: ['owner', 'ceo', 'coo', 'cfo'] },
     ],
   },
   {
     title: 'OPERATIONS',
     items: [
-      {
-        to: '/stores',
-        label: 'Stores',
-        icon: Building2,
-        allowedRoles: [...management, ...adminLevel],
-      },
-      {
-        to: '/checklists',
-        label: 'Checklists',
-        icon: ClipboardList,
-        allowedRoles: [...storeStaff, ...management, ...adminLevel],
-      },
-      { to: '/certifications', label: 'Certifications', icon: Award, allowedRoles: 'all' },
+      { to: '/stores',        label: 'Stores',          icon: Building2,    allowedRoles: management },
+      { to: '/checklists',    label: 'Checklists',      icon: ClipboardList, allowedRoles: management },
+      { to: '/certifications', label: 'Certifications', icon: Award,        allowedRoles: 'all' },
     ],
   },
   {
     title: 'PEOPLE',
     items: [
-      {
-        to: '/users',
-        label: 'Users & Roles',
-        icon: Users,
-        // Explicit subset of management: only director/corporate + admins
-        allowedRoles: [...adminLevel, 'operations_director', 'corporate'],
-      },
-      {
-        to: '/team-performance',
-        label: 'Team Performance',
-        icon: BarChart2,
-        allowedRoles: [...management, ...adminLevel],
-      },
+      { to: '/users',          label: 'Users & Roles',     icon: Users,       allowedRoles: ADMIN_ROLES },
+      { to: '/employee-roles', label: 'Employee Roles',    icon: ShieldCheck, allowedRoles: ADMIN_ROLES },
+      { to: '/team-performance', label: 'Team Performance', icon: BarChart2,  allowedRoles: management },
     ],
   },
   {
@@ -116,7 +82,7 @@ export const navSections: NavSection[] = [
   {
     title: 'SETTINGS',
     items: [
-      { to: '/settings', label: 'Settings', icon: Settings, allowedRoles: adminLevel },
+      { to: '/settings', label: 'Settings', icon: Settings, allowedRoles: ADMIN_ROLES },
     ],
   },
 ];

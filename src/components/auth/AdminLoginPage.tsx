@@ -31,7 +31,7 @@ export function AdminLoginPage() {
     try {
       const res = await authApi.login(data.email, data.password);
       const { user, accessToken, refreshToken } = res.data.data;
-      if (user.role !== 'admin') {
+      if (!adminAuthStorage.isAdmin()) {
         adminAuthStorage.clearSession();
         toast.error('Admin access only');
         return;

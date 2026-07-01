@@ -15,21 +15,41 @@ export interface Lesson {
   questions?: QuizQuestion[];
 }
 
+// Mirrors the backend UserRole enum exactly — do not add values not in the backend model.
 export type UserRole =
-  | 'community'
-  | 'barista'
-  | 'cashier'
-  | 'kitchen'
-  | 'shift_leader'
-  | 'store_leader'
+  | 'owner'
+  | 'ceo'
+  | 'coo'
+  | 'cfo'
+  | 'regional_manager'
   | 'area_manager'
-  | 'operations_manager'
-  | 'operations_director'
-  | 'corporate'
+  | 'store_manager'
+  | 'assistant_manager'
+  | 'shift_supervisor'
+  | 'barista'
+  | 'trainee'
   | 'investor'
-  | 'employee'
-  | 'admin'
-  | 'super_admin';
+  | 'hr_manager'
+  | 'marketing_manager';
+
+export const EMPLOYEE_TIER_ROLES: UserRole[] = [
+  'store_manager',
+  'assistant_manager',
+  'shift_supervisor',
+  'barista',
+  'trainee',
+];
+
+export const ADMIN_ROLES: UserRole[] = [
+  'owner',
+  'ceo',
+  'coo',
+  'cfo',
+  'regional_manager',
+  'area_manager',
+  'hr_manager',
+  'marketing_manager',
+];
 
 export interface User {
   _id: string;
@@ -46,6 +66,7 @@ export interface User {
   reportingTo?: string;
   promotionReadiness?: 'ready' | 'needs_training' | 'not_evaluated';
   javaRistaScore?: number;
+  employeeRoleId?: string | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -41,6 +41,17 @@ export const adminAuthStorage = {
   },
 
   isAdmin(): boolean {
-    return this.getUser()?.role === 'admin';
+    const role = this.getUser()?.role;
+    // Admin panel is accessible to owner and all corporate leadership roles.
+    return (
+      role === 'owner' ||
+      role === 'ceo' ||
+      role === 'coo' ||
+      role === 'cfo' ||
+      role === 'hr_manager' ||
+      role === 'marketing_manager' ||
+      role === 'regional_manager' ||
+      role === 'area_manager'
+    );
   },
 };
