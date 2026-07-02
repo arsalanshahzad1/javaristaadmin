@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FileText, Image, Plus, Search, Trash2, Video, X } from 'lucide-react';
+import { FileText, Search, Trash2, Video } from 'lucide-react';
 import { useForm, useWatch } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import type { AxiosError } from 'axios';

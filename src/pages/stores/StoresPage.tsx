@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Building2, Plus, Pencil, Eye } from 'lucide-react';
 import { storesApi, type Store, type StoreStatus } from '../../api/stores.api';
@@ -31,11 +31,6 @@ export function StoresPage() {
   const { data: stores = [], isLoading } = useQuery({
     queryKey: ['stores'],
     queryFn: storesApi.getAll,
-  });
-
-  const deactivateMutation = useMutation({
-    mutationFn: storesApi.deactivate,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['stores'] }),
   });
 
   const handleEdit = (store: Store) => {
@@ -91,11 +86,6 @@ export function StoresPage() {
               store={store}
               onEdit={() => handleEdit(store)}
               onView={() => navigate(`/stores/${store._id}`)}
-              onDeactivate={() => {
-                if (confirm(`Deactivate "${store.name}"?`)) {
-                  deactivateMutation.mutate(store._id);
-                }
-              }}
             />
           ))}
         </div>
@@ -119,12 +109,10 @@ function StoreCard({
   store,
   onEdit,
   onView,
-  onDeactivate,
 }: {
   store: Store;
   onEdit: () => void;
   onView: () => void;
-  onDeactivate: () => void;
 }) {
   return (
     <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl overflow-hidden flex flex-col">

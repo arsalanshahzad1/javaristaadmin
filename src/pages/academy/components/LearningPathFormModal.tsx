@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { X, GripVertical, Plus, Trash2 } from 'lucide-react';
+import { X, GripVertical, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { AxiosError } from 'axios';
 import adminApiClient from '../../../api/adminApiClient';

@@ -18,6 +18,8 @@ export interface Lesson {
 // Mirrors the backend UserRole enum exactly — do not add values not in the backend model.
 export type UserRole =
   | 'owner'
+  | 'admin'
+  | 'user'
   | 'ceo'
   | 'coo'
   | 'cfo'
@@ -42,6 +44,7 @@ export const EMPLOYEE_TIER_ROLES: UserRole[] = [
 
 export const ADMIN_ROLES: UserRole[] = [
   'owner',
+  'admin',
   'ceo',
   'coo',
   'cfo',

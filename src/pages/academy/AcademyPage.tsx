@@ -50,8 +50,8 @@ type LearningPath = {
   description?: string;
   category: PathCategory;
   targetRoles: string[];
-  targetStores?: string[];
-  courses: unknown[];
+  targetStores: string[];
+  courses: string[];
   prerequisites: string[];
   estimatedWeeks?: number;
   isActive: boolean;
@@ -142,7 +142,8 @@ export function AcademyPage() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'courses' | 'enrollments' | 'paths'>('courses');
   const [courseFilter, setCourseFilter] = useState('');
-  const [pathModal, setPathModal] = useState<LearningPath | null | 'new'>(null);
+  const [pathModal, setPathModal] = useState<LearningPath | null>(null);
+  const [isPathModalOpen, setIsPathModalOpen] = useState(false);
 
   const coursesQuery = useQuery({ queryKey: ['academy-courses'], queryFn: getCourses });
   const enrollmentsQuery = useQuery({
@@ -192,7 +193,14 @@ export function AcademyPage() {
           <p className="mt-1 text-sm text-[#777]">Manage courses, lessons, and enrollments.</p>
         </div>
         {activeTab === 'paths' ? (
-          <button type="button" onClick={() => setPathModal('new')} className="inline-flex items-center gap-2 rounded-lg bg-[#D62B2B] px-4 py-2 text-sm font-medium text-white hover:bg-[#B92323]">
+          <button
+            type="button"
+            onClick={() => {
+              setPathModal(null);
+              setIsPathModalOpen(true);
+            }}
+            className="inline-flex items-center gap-2 rounded-lg bg-[#D62B2B] px-4 py-2 text-sm font-medium text-white hover:bg-[#B92323]"
+          >
             <Plus size={16} />
             New Path
           </button>
@@ -309,7 +317,16 @@ export function AcademyPage() {
                   <div className="flex items-center justify-between pt-1 border-t border-[#2A2A2A]">
                     <Badge variant={path.isActive ? 'success' : 'default'}>{path.isActive ? 'Active' : 'Inactive'}</Badge>
                     <div className="flex gap-1.5">
-                      <button type="button" onClick={() => setPathModal(path)} className="inline-flex items-center gap-1 rounded-lg border border-[#333] px-2.5 py-1 text-xs text-[#ddd] hover:bg-[#242424]"><Edit size={11} /> Edit</button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPathModal(path);
+                          setIsPathModalOpen(true);
+                        }}
+                        className="inline-flex items-center gap-1 rounded-lg border border-[#333] px-2.5 py-1 text-xs text-[#ddd] hover:bg-[#242424]"
+                      >
+                        <Edit size={11} /> Edit
+                      </button>
                       <button type="button" disabled={pathToggleMutation.isPending} onClick={() => pathToggleMutation.mutate({ id: path._id, isActive: !path.isActive })} className="inline-flex items-center gap-1 rounded-lg border border-[#333] px-2.5 py-1 text-xs text-[#ddd] hover:bg-[#242424] disabled:opacity-50"><RefreshCw size={11} /></button>
                       <button type="button" onClick={() => pathDeleteMutation.mutate(path._id)} className="inline-flex items-center gap-1 rounded-lg border border-red-900/60 px-2.5 py-1 text-xs text-red-300 hover:bg-red-900/20"><Trash2 size={11} /></button>
                     </div>
@@ -360,10 +377,13 @@ export function AcademyPage() {
         )}
       </section>
 
-      {(pathModal === 'new' || (pathModal && pathModal !== 'new')) && (
+      {isPathModalOpen && (
         <LearningPathFormModal
-          editing={pathModal === 'new' ? null : pathModal}
-          onClose={() => setPathModal(null)}
+          editing={pathModal}
+          onClose={() => {
+            setPathModal(null);
+            setIsPathModalOpen(false);
+          }}
         />
       )}
     </div>
