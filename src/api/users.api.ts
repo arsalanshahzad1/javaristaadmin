@@ -1,5 +1,21 @@
 import api from './axios';
-import type { ApiResponse, BrewLog, PaginatedResponse, User } from '../types';
+import type { ApiResponse, BrewLog, PaginatedResponse } from '../types';
+
+export type AdminRole = 'user' | 'admin';
+
+export type AdminUser = {
+  id?: string;
+  _id?: string;
+  name: string;
+  email: string;
+  role: AdminRole;
+  isPremium: boolean;
+  isVerified: boolean;
+  subscriptionStatus: 'none' | 'active' | 'expired' | 'cancelled';
+  createdAt: string;
+  investorAccessLevel?: string;
+  employeeRoleId?: string | null;
+};
 
 interface GetUsersParams {
   page?: number;
@@ -11,14 +27,14 @@ interface GetUsersParams {
 
 export const usersApi = {
   getUsers: (params?: GetUsersParams) =>
-    api.get<PaginatedResponse<User>>('/admin/users', { params }),
+    api.get<PaginatedResponse<AdminUser>>('/admin/users', { params }),
 
   // GET /admin/users/:id — requires backend route
   getUserById: (id: string) =>
-    api.get<ApiResponse<User>>(`/admin/users/${id}`),
+    api.get<ApiResponse<AdminUser>>(`/admin/users/${id}`),
 
-  updateUser: (id: string, data: Partial<Pick<User, 'role' | 'subscriptionStatus' | 'isPremium'>>) =>
-    api.put<ApiResponse<User>>(`/admin/users/${id}`, data),
+  updateUser: (id: string, data: Partial<Pick<AdminUser, 'role' | 'isPremium'>> & { subscriptionStatus?: 'none' | 'active' | 'expired' | 'cancelled' }) =>
+    api.put<ApiResponse<AdminUser>>(`/admin/users/${id}`, data),
 
   deleteUser: (id: string) =>
     api.delete<ApiResponse<void>>(`/admin/users/${id}`),
@@ -32,11 +48,11 @@ export const usersApi = {
 
   /** @deprecated use getUsers */
   getAll: (params?: GetUsersParams) =>
-    api.get<PaginatedResponse<User>>('/admin/users', { params }),
+    api.get<PaginatedResponse<AdminUser>>('/admin/users', { params }),
 
   /** @deprecated use updateUser */
-  update: (id: string, data: Partial<Pick<User, 'role' | 'subscriptionStatus' | 'isPremium'>>) =>
-    api.put<ApiResponse<User>>(`/admin/users/${id}`, data),
+  update: (id: string, data: Partial<Pick<AdminUser, 'role' | 'isPremium'>> & { subscriptionStatus?: 'none' | 'active' | 'expired' | 'cancelled' }) =>
+    api.put<ApiResponse<AdminUser>>(`/admin/users/${id}`, data),
 
   /** @deprecated use deleteUser */
   delete: (id: string) =>

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Edit, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
+import { BookOpen, Edit, Plus, Search, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { AxiosError } from 'axios';
 import adminApiClient from '../../api/adminApiClient';
@@ -66,13 +66,6 @@ async function getPlaybooks(params: { search?: string; category?: string; requir
   return response.data;
 }
 
-async function updatePlaybookActive(payload: { slug: string; isActive: boolean }) {
-  const response = await adminApiClient.put<ApiEnvelope<Playbook>>(`/playbooks/${payload.slug}`, {
-    isActive: payload.isActive,
-  });
-  return response.data;
-}
-
 async function deletePlaybook(slug: string) {
   const response = await adminApiClient.delete<ApiEnvelope<unknown>>(`/playbooks/${slug}`);
   return response.data;
@@ -118,15 +111,6 @@ export function PlaybooksManagementPage() {
       requiredRole: requiredRole || undefined,
       includeInactive: showInactive,
     }),
-  });
-
-  const toggleMutation = useMutation({
-    mutationFn: updatePlaybookActive,
-    onSuccess: (response) => {
-      toast.success(response.message || 'Playbook updated');
-      queryClient.invalidateQueries({ queryKey: ['playbooks'] });
-    },
-    onError: (error) => toast.error(getErrorMessage(error)),
   });
 
   const deleteMutation = useMutation({

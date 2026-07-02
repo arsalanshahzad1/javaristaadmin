@@ -132,10 +132,6 @@ function SkeletonRows({ cols }: { cols: number }) {
   );
 }
 
-function fieldClass() {
-  return 'w-full rounded-lg border border-[#333] bg-[#111] px-3 py-2 text-sm text-white outline-none focus:border-[#D62B2B] focus:ring-2 focus:ring-[#D62B2B]/30';
-}
-
 // ─── API Helpers ──────────────────────────────────────────────────────────────
 
 async function fetchContent(contentType: string) {
