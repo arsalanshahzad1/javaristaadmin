@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { X, GripVertical, Trash2 } from 'lucide-react';
+import { X, GripVertical, Plus, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { AxiosError } from 'axios';
 import adminApiClient from '../../../api/adminApiClient';
@@ -25,13 +25,13 @@ const ALL_ROLES = [
 ];
 
 type Course = { _id: string; title: string; category: string };
-export type LearningPath = {
+type LearningPath = {
   _id: string;
   title: string;
   description?: string;
   category: PathCategory;
   targetRoles: string[];
-  targetStores?: string[];
+  targetStores: string[];
   courses: string[];
   prerequisites: string[];
   estimatedWeeks?: number;

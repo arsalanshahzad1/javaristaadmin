@@ -182,12 +182,6 @@ function StoreCard({
             <Eye size={12} />
             View
           </button>
-          <button
-            onClick={onDeactivate}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#ccc] hover:text-white bg-[#242424] hover:bg-[#2A2A2A] rounded-lg transition-colors"
-          >
-            Deactivate
-          </button>
         </div>
       </div>
     </div>

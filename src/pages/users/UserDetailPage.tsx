@@ -15,8 +15,7 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { PageSpinner } from '../../components/ui/Spinner';
 import { formatDate } from '../../utils/formatters';
 import api from '../../api/axios';
-import type { BrewLog, BrewMethod, Recipe, Bean as BeanType, EspressoShot, PaginatedResponse } from '../../types';
-import type { AdminUser } from '../../api/users.api';
+import type { BrewLog, BrewMethod, Recipe, Bean as BeanType, EspressoShot, PaginatedResponse, User } from '../../types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -53,7 +52,7 @@ function StatItem({
   );
 }
 
-function PlanBadge({ status }: { status: AdminUser['subscriptionStatus'] }) {
+function PlanBadge({ status }: { status: User['subscriptionStatus'] }) {
   if (status === 'active') return <Badge variant="success">Premium</Badge>;
   if (status === 'expired') return <Badge variant="warning">Expired</Badge>;
   if (status === 'cancelled') return <Badge variant="warning">Cancelled</Badge>;

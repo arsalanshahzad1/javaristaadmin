@@ -69,6 +69,7 @@ const certificationTypes: { value: CertificationType; label: string }[] = [
   { value: 'java_champion', label: 'Java Champion' },
 ];
 
+const TRACKS = ['coffee', 'leadership', 'operations', 'specialty_beverage', 'food_safety', 'custom'];
 const trackLabel = (t: string) => t.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 const trackColor: Record<string, string> = {
   coffee: '#8B5CF6',

@@ -303,24 +303,24 @@ export function RoleManualDetailPage() {
       <ConfirmDialog
         isOpen={!!deleteSectionTarget}
         title="Delete Section?"
-        message={`Section "${deleteSectionTarget?.title}" and all its items will be removed.`}
+        description={`Section "${deleteSectionTarget?.title}" and all its items will be removed.`}
         onConfirm={() => deleteSectionMutation.mutate(deleteSectionTarget!._id)}
-        onClose={() => setDeleteSectionTarget(null)}
-        loading={deleteSectionMutation.isPending}
+        onCancel={() => setDeleteSectionTarget(null)}
+        isLoading={deleteSectionMutation.isPending}
       />
 
       <ConfirmDialog
         isOpen={!!deleteItemTarget}
         title="Delete Item?"
-        message={`"${deleteItemTarget?.item.title}" will be permanently removed.`}
+        description={`"${deleteItemTarget?.item.title}" will be permanently removed.`}
         onConfirm={() =>
           deleteItemMutation.mutate({
             sectionId: deleteItemTarget!.sectionId,
             itemId: deleteItemTarget!.item._id,
           })
         }
-        onClose={() => setDeleteItemTarget(null)}
-        loading={deleteItemMutation.isPending}
+        onCancel={() => setDeleteItemTarget(null)}
+        isLoading={deleteItemMutation.isPending}
       />
     </div>
   );

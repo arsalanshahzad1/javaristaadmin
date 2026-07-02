@@ -167,10 +167,10 @@ export function RoleManualsPage() {
       <ConfirmDialog
         isOpen={!!deleteTarget}
         title="Delete Manual?"
-        message={`"${deleteTarget?.title}" will be permanently deleted.`}
+        description={`"${deleteTarget?.title}" will be permanently deleted.`}
         onConfirm={() => deleteMutation.mutate(deleteTarget!._id)}
-        onClose={() => setDeleteTarget(null)}
-        loading={deleteMutation.isPending}
+        onCancel={() => setDeleteTarget(null)}
+        isLoading={deleteMutation.isPending}
       />
     </div>
   );

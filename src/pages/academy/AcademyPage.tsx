@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import type { AxiosError } from 'axios';
 import adminApiClient from '../../api/adminApiClient';
 import { Badge } from '../../components/ui/Badge';
-import { LearningPathFormModal, type LearningPath } from './components/LearningPathFormModal';
+import { LearningPathFormModal } from './components/LearningPathFormModal';
 
 type ApiEnvelope<T> = {
   success: boolean;
@@ -44,6 +44,20 @@ type Enrollment = {
 };
 
 type PathCategory = 'mandatory' | 'recommended' | 'leadership' | 'certification' | 'corporate';
+type LearningPath = {
+  _id: string;
+  title: string;
+  description?: string;
+  category: PathCategory;
+  targetRoles: string[];
+  targetStores?: string[];
+  courses: unknown[];
+  prerequisites: string[];
+  estimatedWeeks?: number;
+  isActive: boolean;
+  enrollmentCount: number;
+  completionRate: number;
+};
 
 const PATH_CATEGORY_COLORS: Record<PathCategory, string> = {
   mandatory: 'bg-red-900/40 text-red-300',
@@ -346,7 +360,7 @@ export function AcademyPage() {
         )}
       </section>
 
-      {pathModal !== null && (
+      {(pathModal === 'new' || (pathModal && pathModal !== 'new')) && (
         <LearningPathFormModal
           editing={pathModal === 'new' ? null : pathModal}
           onClose={() => setPathModal(null)}
