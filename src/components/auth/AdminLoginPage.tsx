@@ -10,6 +10,7 @@ import { adminAuthStorage } from '../../api/adminAuthStorage';
 import { useAuth } from '../../hooks/useAuth';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
+import { ADMIN_ROLES } from '../../types';
 
 const schema = z.object({
   email: z.string().email('Enter a valid email'),
@@ -31,7 +32,7 @@ export function AdminLoginPage() {
     try {
       const res = await authApi.login(data.email, data.password);
       const { user, accessToken, refreshToken } = res.data.data;
-      if (!adminAuthStorage.isAdmin()) {
+      if (!ADMIN_ROLES.includes(user.role)) {
         adminAuthStorage.clearSession();
         toast.error('Admin access only');
         return;

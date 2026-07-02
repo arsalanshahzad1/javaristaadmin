@@ -9,6 +9,7 @@ import { authApi } from '../../api/auth.api';
 import { useAuth } from '../../hooks/useAuth';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
+import { ADMIN_ROLES } from '../../types';
 
 const schema = z.object({
   email: z.string().email('Enter a valid email'),
@@ -30,7 +31,6 @@ export function LoginPage() {
     try {
       const res = await authApi.login(data.email, data.password);
       const { user, accessToken } = res.data.data;
-      const ADMIN_ROLES = ['owner','ceo','coo','cfo','regional_manager','area_manager','hr_manager','marketing_manager'];
       if (!ADMIN_ROLES.includes(user.role)) {
         toast.error('Admin access required');
         return;
