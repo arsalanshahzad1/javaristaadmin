@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, GraduationCap, BookOpen, ShoppingBag, Lock,
-  ClipboardList, Award, Users, BarChart2, MessageCircle,
+  ClipboardList, Award, Users, BarChart2, MessageCircle, Coffee,
   Clock, LogOut, ChevronLeft, ChevronRight, Settings, Network, GitPullRequest,
 } from 'lucide-react';
 import { adminAuthStorage } from '../../api/adminAuthStorage';
@@ -35,6 +35,7 @@ const navSections: NavSection[] = [
       { to: '/java-academy', icon: GraduationCap, label: 'Java Academy' },
       { to: '/playbooks', icon: BookOpen, label: 'Playbooks' },
       { to: '/store-ops', icon: ShoppingBag, label: 'Store Operations' },
+      { to: '/brew-methods', icon: Coffee, label: 'Brew Methods' },
       { to: '/investor-content', icon: Lock, label: 'Investor Content' },
     ],
   },
