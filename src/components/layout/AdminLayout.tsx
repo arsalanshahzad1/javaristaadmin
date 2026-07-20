@@ -4,7 +4,10 @@ import {
   LayoutDashboard, GraduationCap, BookOpen, ShoppingBag, Lock,
   ClipboardList, Award, Users, BarChart2, MessageCircle, Coffee,
   Clock, LogOut, ChevronLeft, ChevronRight, Settings, Network, GitPullRequest,
-    CoffeeIcon } from 'lucide-react';
+    CoffeeIcon, 
+    BookMarked,
+    Building2,
+    ShieldCheck} from 'lucide-react';
 import { adminAuthStorage } from '../../api/adminAuthStorage';
 import { useAuth } from '../../hooks/useAuth';
 import { authApi } from '../../api/auth.api';
@@ -45,7 +48,7 @@ const navSections: NavSection[] = [
       { to: '/checklists', icon: ClipboardList, label: 'Checklists' },
       { to: '/certifications', icon: Award, label: 'Certifications' },
       // { to: '/region/certifications', icon: Award, label: 'Region Certifications' },
-      { to: '/recipes', icon: CoffeeIcon, label: 'Recipes' },
+   
 
 
     ],
@@ -58,6 +61,18 @@ const navSections: NavSection[] = [
       { to: '/region/dashboard', icon: BarChart2, label: 'Region Dashboard' },
     ],
   },
+
+{
+  title: 'Missing route',
+  items: [
+    { to: '/role-manuals',   icon: BookMarked,  label: 'Role Manuals' },
+    { to: '/stores',         icon: Building2,   label: 'Stores' },
+    // { to: '/employee-roles', icon: ShieldCheck, label: 'Employee Roles' },
+    { to: '/recipes', icon: CoffeeIcon, label: 'Recipes' },
+  ],
+},
+
+
   {
     title: 'ORGANISATION',
     items: [
