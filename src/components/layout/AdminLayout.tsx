@@ -4,7 +4,7 @@ import {
   LayoutDashboard, GraduationCap, BookOpen, ShoppingBag, Lock,
   ClipboardList, Award, Users, BarChart2, MessageCircle, Coffee,
   Clock, LogOut, ChevronLeft, ChevronRight, Settings, Network, GitPullRequest,
-} from 'lucide-react';
+    CoffeeIcon } from 'lucide-react';
 import { adminAuthStorage } from '../../api/adminAuthStorage';
 import { useAuth } from '../../hooks/useAuth';
 import { authApi } from '../../api/auth.api';
@@ -44,6 +44,10 @@ const navSections: NavSection[] = [
     items: [
       { to: '/checklists', icon: ClipboardList, label: 'Checklists' },
       { to: '/certifications', icon: Award, label: 'Certifications' },
+      // { to: '/region/certifications', icon: Award, label: 'Region Certifications' },
+      { to: '/recipes', icon: CoffeeIcon, label: 'Recipes' },
+
+
     ],
   },
   {
