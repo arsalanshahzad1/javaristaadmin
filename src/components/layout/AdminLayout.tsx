@@ -6,8 +6,7 @@ import {
   Clock, LogOut, ChevronLeft, ChevronRight, Settings, Network, GitPullRequest,
     CoffeeIcon, 
     BookMarked,
-    Building2,
-    ShieldCheck} from 'lucide-react';
+    Building2} from 'lucide-react';
 import { adminAuthStorage } from '../../api/adminAuthStorage';
 import { useAuth } from '../../hooks/useAuth';
 import { authApi } from '../../api/auth.api';
