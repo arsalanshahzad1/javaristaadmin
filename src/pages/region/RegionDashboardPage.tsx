@@ -613,7 +613,7 @@ export function RegionDashboardPage() {
   if (regionsLoaded && regions.length === 0) {
     return (
       <div className="space-y-6">
-        <h1 className="text-xl font-bold text-white">Region Dashboard</h1>
+        <h1 className="text-xl font-bold text-white">Region Dashboard </h1>
         <div className="flex flex-col items-center justify-center rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] py-16 text-center">
           <Building2 size={36} className="mb-4 text-[#444]" />
           <p className="text-sm font-medium text-[#888]">No regions configured yet.</p>

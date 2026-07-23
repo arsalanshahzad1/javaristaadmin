@@ -25,12 +25,13 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
         <Dialog.Content
           className={`fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2
             w-[calc(100%-2rem)] ${sizeClasses[size]}
-            bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-6 z-50
+            flex max-h-[85vh] flex-col
+            bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl z-50
             focus:outline-none shadow-xl
             animate-in fade-in-0 zoom-in-95`}
           onEscapeKeyDown={onClose}
         >
-          <div className="flex items-center justify-between mb-5">
+          <div className="flex shrink-0 items-center justify-between px-4 py-4 sm:px-6 sm:py-5 border-b border-[#2A2A2A]">
             <Dialog.Title className="text-base font-semibold text-white">{title}</Dialog.Title>
             <Dialog.Close asChild>
               <button
@@ -42,7 +43,9 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
               </button>
             </Dialog.Close>
           </div>
-          {children}
+          <div className="overflow-y-auto px-4 py-5 sm:px-6">
+            {children}
+          </div>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

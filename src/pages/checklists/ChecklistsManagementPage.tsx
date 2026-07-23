@@ -8,6 +8,7 @@ import adminApiClient from '../../api/adminApiClient';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { useDebounce } from '../../hooks/useDebounce';
+import { resolveMediaUrl } from '../../utils/media';
 
 type Category =
   | 'opening'
@@ -503,12 +504,12 @@ function TemplateModal({ isOpen, onClose, template }: { isOpen: boolean; onClose
           </div>
           <div className="space-y-2">
             {items.fields.map((item, index) => (
-              <div key={item.id} className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-2 rounded-lg border border-[#2A2A2A] bg-[#151515] p-2">
+              <div key={item.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-[#2A2A2A] bg-[#151515] p-2">
                 <div className="flex items-center gap-1 text-xs text-[#777]">
                   <button type="button" disabled={index === 0} onClick={() => items.swap(index, index - 1)} className="rounded border border-[#333] px-2 py-1 disabled:opacity-30">Up</button>
                   <button type="button" disabled={index === items.fields.length - 1} onClick={() => items.swap(index, index + 1)} className="rounded border border-[#333] px-2 py-1 disabled:opacity-30">Down</button>
                 </div>
-                <input {...register(`items.${index}.label`, { required: true })} placeholder="Item label" className={fieldClass()} />
+                <input {...register(`items.${index}.label`, { required: true })} placeholder="Item label" className={`${fieldClass()} min-w-[160px] flex-1`} />
                 <label className="flex items-center gap-1 text-xs text-[#ccc]"><input type="checkbox" {...register(`items.${index}.requiresPhoto`)} className="accent-[#D62B2B]" /> Photo</label>
                 <label className="flex items-center gap-1 text-xs text-[#ccc]"><input type="checkbox" {...register(`items.${index}.requiresNote`)} className="accent-[#D62B2B]" /> Note</label>
                 <button type="button" onClick={() => items.remove(index)} className="rounded-lg border border-red-900/60 p-2 text-red-300 hover:bg-red-900/20"><Trash2 size={14} /></button>
@@ -566,16 +567,33 @@ function SubmissionReviewModal({ submissionId, onClose }: { submissionId: string
             <Badge variant={statusVariant[submission.status]}>{labelFor(submission.status)}</Badge>
           </div>
           <div className="space-y-3">
-            {submission.completedItems.map((item) => (
-              <div key={`${item.itemOrder}-${item.label}`} className="rounded-lg border border-[#2A2A2A] bg-[#151515] p-4">
-                <div className="flex items-center gap-2">
-                  <input type="checkbox" checked={item.completed} readOnly className="accent-[#D62B2B]" />
-                  <span className="font-medium text-white">{item.label}</span>
+            {submission.completedItems.map((item) => {
+              const photoUrl = resolveMediaUrl(item.photoUrl);
+              return (
+                <div key={`${item.itemOrder}-${item.label}`} className="rounded-lg border border-[#2A2A2A] bg-[#151515] p-4">
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" checked={item.completed} readOnly className="accent-[#D62B2B]" />
+                    <span className="font-medium text-white">{item.label}</span>
+                  </div>
+                  {item.note && <p className="mt-2 text-sm text-[#bbb]">{item.note}</p>}
+                  {photoUrl && (
+                    <a href={photoUrl} target="_blank" rel="noreferrer" className="mt-3 inline-block">
+                      <img
+                        src={photoUrl}
+                        alt={item.label}
+                        loading="lazy"
+                        className="h-28 w-28 rounded-lg border border-[#2A2A2A] object-cover transition-opacity hover:opacity-80"
+                        onError={(event) => {
+                          event.currentTarget.onerror = null;
+                          event.currentTarget.src =
+                            "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='112' height='112'%3E%3Crect width='100%25' height='100%25' fill='%23222'/%3E%3Ctext x='50%25' y='50%25' fill='%23666' font-size='11' text-anchor='middle' dy='.3em'%3ENo Image%3C/text%3E%3C/svg%3E";
+                        }}
+                      />
+                    </a>
+                  )}
                 </div>
-                {item.note && <p className="mt-2 text-sm text-[#bbb]">{item.note}</p>}
-                {item.photoUrl && <img src={item.photoUrl} alt={item.label} className="mt-3 h-28 w-28 rounded-lg object-cover" />}
-              </div>
-            ))}
+              );
+            })}
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-[#ccc]">Manager Note</label>

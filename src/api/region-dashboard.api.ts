@@ -53,7 +53,7 @@ type Envelope<T> = { success: boolean; message: string; data: T };
  * Returns the list of all region IDs available to the current admin.
  */
 export async function getRegions(): Promise<string[]> {
-  const res = await adminApiClient.get<Envelope<string[]>>('/api/regions');
+  const res = await adminApiClient.get<Envelope<string[]>>('/regions');
   return res.data.data;
 }
 
@@ -69,7 +69,7 @@ export async function getRegionOverview(
   to?: string,
 ): Promise<RegionOverview> {
   const res = await adminApiClient.get<Envelope<RegionOverview>>(
-    `/api/regions/${regionId}/overview`,
+    `/regions/${regionId}/dashboard/overview`,
     { params: { from, to } },
   );
   return res.data.data;
@@ -87,7 +87,7 @@ export async function getRegionStores(
   to?: string,
 ): Promise<StoreBreakdownRow[]> {
   const res = await adminApiClient.get<Envelope<StoreBreakdownRow[]>>(
-    `/api/regions/${regionId}/stores`,
+    `/regions/${regionId}/dashboard/stores`,
     { params: { from, to } },
   );
   return res.data.data;
@@ -105,7 +105,7 @@ export async function getRegionTrend(
   to?: string,
 ): Promise<TrendPoint[]> {
   const res = await adminApiClient.get<Envelope<TrendPoint[]>>(
-    `/api/regions/${regionId}/trend`,
+    `/regions/${regionId}/dashboard/trend`,
     { params: { from, to } },
   );
   return res.data.data;
@@ -121,7 +121,7 @@ export async function getRegionTopPerformers(
   limit = 10,
 ): Promise<TopPerformer[]> {
   const res = await adminApiClient.get<Envelope<TopPerformer[]>>(
-    `/api/regions/${regionId}/top-performers`,
+    `/regions/${regionId}/dashboard/top-performers`,
     { params: { limit } },
   );
   return res.data.data;
