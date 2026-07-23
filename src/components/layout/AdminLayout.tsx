@@ -57,15 +57,15 @@ const navSections: NavSection[] = [
     items: [
       { to: '/users', icon: Users, label: 'Users & Roles' },
       { to: '/team-performance', icon: BarChart2, label: 'Team Performance' },
-      { to: '/region/dashboard', icon: BarChart2, label: 'Region Dashboard' },
+      // { to: '/region/dashboard', icon: BarChart2, label: 'Region Dashboard' },
     ],
   },
 
 {
-  title: 'Missing route',
+  title: 'Create Recipes',
   items: [
-    { to: '/role-manuals',   icon: BookMarked,  label: 'Role Manuals' },
-    { to: '/stores',         icon: Building2,   label: 'Stores' },
+    // { to: '/role-manuals',   icon: BookMarked,  label: 'Role Manuals' },
+    // { to: '/stores',         icon: Building2,   label: 'Stores' },
     // { to: '/employee-roles', icon: ShieldCheck, label: 'Employee Roles' },
     { to: '/recipes', icon: CoffeeIcon, label: 'Recipes' },
   ],
@@ -75,7 +75,7 @@ const navSections: NavSection[] = [
   {
     title: 'ORGANISATION',
     items: [
-      { to: '/org/chart', icon: Network, label: 'Org Chart' },
+      // { to: '/org/chart', icon: Network, label: 'Org Chart' },
       { to: '/org/role-changes', icon: GitPullRequest, label: 'Role Requests' },
     ],
   },
