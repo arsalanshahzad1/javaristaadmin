@@ -3,10 +3,9 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, GraduationCap, BookOpen, ShoppingBag, Lock,
   ClipboardList, Award, Users, BarChart2, MessageCircle, Coffee,
-  Clock, LogOut, ChevronLeft, ChevronRight, Settings, Network, GitPullRequest,
+  Clock, LogOut, ChevronLeft, ChevronRight, Settings, GitPullRequest,
     CoffeeIcon, 
-    BookMarked,
-    Building2} from 'lucide-react';
+  } from 'lucide-react';
 import { adminAuthStorage } from '../../api/adminAuthStorage';
 import { useAuth } from '../../hooks/useAuth';
 import { authApi } from '../../api/auth.api';

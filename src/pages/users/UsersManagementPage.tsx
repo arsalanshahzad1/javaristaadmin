@@ -5,7 +5,7 @@ import { Download, Search, ShieldCheck, Trash2, UserCog, Activity } from 'lucide
 import toast from 'react-hot-toast';
 import type { AxiosError } from 'axios';
 import adminApiClient from '../../api/adminApiClient';
-import { employeeRolesApi } from '../../api/employeeRoles.api';
+// import { employeeRolesApi } from '../../api/employeeRoles.api';
 import { Badge } from '../../components/ui/Badge';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { Pagination } from '../../components/ui/Pagination';
@@ -179,11 +179,6 @@ export function UsersManagementPage() {
   const debouncedSearch = useDebounce(search, 300);
   const limit = 20;
 
-  const employeeRolesQuery = useQuery({
-    queryKey: ['employee-roles-list'],
-    queryFn: () => employeeRolesApi.list().then((r) => r.data.data),
-    staleTime: 60_000,
-  });
 
   const usersQuery = useQuery({
     queryKey: ['admin-users', page, limit, debouncedSearch, role],
