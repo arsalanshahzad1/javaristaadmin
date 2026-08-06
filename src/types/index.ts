@@ -75,6 +75,8 @@ export interface User {
 }
 
 export interface BrewMethod {
+  requiredEquipment: never[];
+  requiredEquipment: never[];
   _id: string;
   name: string;
   slug: string;
