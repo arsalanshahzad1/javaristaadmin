@@ -16,7 +16,7 @@ interface BrewMethodPayload {
 
 export const brewMethodsApi = {
   getBrewMethods: () =>
-    api.get<ApiResponse<BrewMethod[]>>('/brew-methods'),
+    api.get<ApiResponse<BrewMethod[]>>('/brew-methods', { params: { includeInactive: 'true' } }),
 
   getBrewMethodById: (id: string) =>
     api.get<ApiResponse<BrewMethod>>(`/brew-methods/${id}`),
