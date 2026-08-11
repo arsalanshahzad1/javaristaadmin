@@ -54,6 +54,10 @@ export const ADMIN_ROLES: UserRole[] = [
   'marketing_manager',
 ];
 
+// Roles that may log into the admin app at all — broader than ADMIN_ROLES
+// (corporate/"sees everything"), since store_manager is scoped to one store.
+export const ADMIN_APP_ROLES: UserRole[] = [...ADMIN_ROLES, 'store_manager'];
+
 export interface User {
   _id: string;
   name: string;
@@ -75,7 +79,6 @@ export interface User {
 }
 
 export interface BrewMethod {
-  requiredEquipment: never[];
   requiredEquipment: never[];
   _id: string;
   name: string;

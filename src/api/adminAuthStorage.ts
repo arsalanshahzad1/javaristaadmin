@@ -1,4 +1,4 @@
-import { ADMIN_ROLES, type User } from '../types';
+import { ADMIN_ROLES, ADMIN_APP_ROLES, type User } from '../types';
 
 const SESSION_KEY = 'javarista-admin-session';
 
@@ -41,6 +41,11 @@ export const adminAuthStorage = {
   },
 
   isAdmin(): boolean {
+    const role = this.getUser()?.role;
+    return role != null && ADMIN_APP_ROLES.includes(role);
+  },
+
+  isCorporate(): boolean {
     const role = this.getUser()?.role;
     return role != null && ADMIN_ROLES.includes(role);
   },

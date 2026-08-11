@@ -2,9 +2,10 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { AdminLoginPage } from '../components/auth/AdminLoginPage';
 import { AdminLayout } from '../components/layout/AdminLayout';
 import { AdminProtectedRoute } from './AdminProtectedRoute';
+import { CorporateOnlyRoute } from './CorporateOnlyRoute';
+import { DashboardRoleGate } from './DashboardRoleGate';
 
 // New pages
-import { DashboardPage } from '../pages/dashboard/DashboardPage';
 import { AcademyPage } from '../pages/academy/AcademyPage';
 import { CourseFormPage } from '../pages/academy/CourseFormPage';
 import { JavaAcademyPage } from '../pages/java-academy/JavaAcademyPage';
@@ -29,6 +30,8 @@ import { BrewSharesPage } from '../pages/brew-shares/BrewSharesPage';
 import { CommunityPage } from '../pages/community/CommunityPage';
 import { StoresPage } from '../pages/stores/StoresPage';
 import { StoreDetailPage } from '../pages/stores/StoreDetailPage';
+import { MyStorePage } from '../pages/stores/MyStorePage';
+import { EmployeeRolesPage } from '../pages/employee-roles/EmployeeRolesPage';
 import { OrgChartPage } from '../pages/org/OrgChartPage';
 import { RoleChangeRequestsPage } from '../pages/org/RoleChangeRequestsPage';
 import { RegionDashboardPage } from '../pages/region/RegionDashboardPage';
@@ -60,73 +63,69 @@ export const adminRouter = createBrowserRouter([
       {
         element: <AdminLayout />,
         children: [
-          // Primary dashboard route
-          { path: '/dashboard', element: <DashboardPage /> },
+          // Primary dashboard route — store_manager is redirected to /my-store
+          { path: '/dashboard', element: <DashboardRoleGate /> },
 
-          // Content
+          // Store-manager-visible + corporate (shared)
+          { path: '/my-store', element: <MyStorePage /> },
           { path: '/academy', element: <AcademyPage /> },
-          { path: '/academy/courses/new', element: <CourseFormPage /> },
-          { path: '/academy/courses/:id/edit', element: <CourseFormPage /> },
           { path: '/java-academy', element: <JavaAcademyPage /> },
           { path: '/playbooks', element: <PlaybooksPage /> },
-          { path: '/playbooks/new', element: <PlaybookFormPage /> },
-          { path: '/playbooks/:slug/edit', element: <PlaybookFormPage /> },
           { path: '/playbooks/:slug/detail', element: <PlaybookDetailPage /> },
           { path: '/store-ops', element: <StoreOpsPage /> },
-          { path: '/store-ops/recipes/new', element: <StoreRecipeFormPage /> },
-          { path: '/store-ops/recipes/:slug/edit', element: <StoreRecipeFormPage /> },
           { path: '/store-ops/recipes/:slug/detail', element: <StoreRecipeDetailPage /> },
           { path: '/store-recipes', element: <Navigate to="/store-ops" replace /> },
-          { path: '/exclusive-content', element: <ExclusiveContentPage /> },
-          { path: '/investor-content', element: <InvestorContentPage /> },
-          { path: '/investor-content/new', element: <InvestorContentFormPage /> },
-          { path: '/investor-content/:slug/edit', element: <InvestorContentFormPage /> },
-          { path: '/investor-content/journals/new', element: <ConstructionJournalFormPage /> },
-          { path: '/investor-content/journals/:id/edit', element: <ConstructionJournalFormPage /> },
-          { path: '/investor-content/stories/new', element: <SourcingStoryFormPage /> },
-          { path: '/investor-content/stories/:id/edit', element: <SourcingStoryFormPage /> },
-
           { path: '/role-manuals', element: <RoleManualsPage /> },
           { path: '/role-manuals/:id', element: <RoleManualDetailPage /> },
-
-          // Operations
-          { path: '/stores', element: <StoresPage /> },
-          { path: '/stores/:id', element: <StoreDetailPage /> },
           { path: '/checklists', element: <ChecklistsPage /> },
           { path: '/certifications', element: <CertificationsPage /> },
           { path: '/certifications/:id/detail', element: <CertificationDetailPage /> },
-
-          // People
-          { path: '/users', element: <UsersPage /> },
-          { path: '/users/:id', element: <UserDetailPage /> },
           { path: '/performance', element: <TeamPerformancePage /> },
           { path: '/performance/user/:id', element: <UserPerformancePage /> },
           { path: '/team-performance', element: <TeamPerformancePage /> },
           { path: '/team-performance/employee/:userId', element: <EmployeeProfilePage /> },
-
-          // Organisation
-          { path: '/org/chart', element: <OrgChartPage /> },
           { path: '/org/role-changes', element: <RoleChangeRequestsPage /> },
-
-          // Region
-          { path: '/region/dashboard', element: <RegionDashboardPage /> },
-
-          // Community
           { path: '/brew-shares', element: <BrewSharesPage /> },
           { path: '/community', element: <CommunityPage /> },
 
-          // Existing routes (legacy paths)
-          { path: '/recipes', element: <RecipesPage /> },
-          { path: '/recipes/new', element: <RecipeFormPage /> },
-          { path: '/recipes/:id/edit', element: <RecipeFormPage /> },
-          { path: '/brew-methods', element: <BrewMethodsPage /> },
-          { path: '/brew-methods/new', element: <BrewMethodFormPage /> },
-          { path: '/brew-methods/:id/edit', element: <BrewMethodFormPage /> },
-          { path: '/brew-logs', element: <BrewLogsPage /> },
-          { path: '/espresso', element: <EspressoPage /> },
-          { path: '/subscriptions', element: <SubscriptionsPage /> },
-          { path: '/analytics', element: <AnalyticsPage /> },
-          { path: '/settings', element: <SettingsPage /> },
+          // Corporate-only
+          {
+            element: <CorporateOnlyRoute />,
+            children: [
+              { path: '/stores', element: <StoresPage /> },
+              { path: '/stores/:id', element: <StoreDetailPage /> },
+              { path: '/employee-roles', element: <EmployeeRolesPage /> },
+              { path: '/users', element: <UsersPage /> },
+              { path: '/users/:id', element: <UserDetailPage /> },
+              { path: '/academy/courses/new', element: <CourseFormPage /> },
+              { path: '/academy/courses/:id/edit', element: <CourseFormPage /> },
+              { path: '/playbooks/new', element: <PlaybookFormPage /> },
+              { path: '/playbooks/:slug/edit', element: <PlaybookFormPage /> },
+              { path: '/store-ops/recipes/new', element: <StoreRecipeFormPage /> },
+              { path: '/store-ops/recipes/:slug/edit', element: <StoreRecipeFormPage /> },
+              { path: '/exclusive-content', element: <ExclusiveContentPage /> },
+              { path: '/investor-content', element: <InvestorContentPage /> },
+              { path: '/investor-content/new', element: <InvestorContentFormPage /> },
+              { path: '/investor-content/:slug/edit', element: <InvestorContentFormPage /> },
+              { path: '/investor-content/journals/new', element: <ConstructionJournalFormPage /> },
+              { path: '/investor-content/journals/:id/edit', element: <ConstructionJournalFormPage /> },
+              { path: '/investor-content/stories/new', element: <SourcingStoryFormPage /> },
+              { path: '/investor-content/stories/:id/edit', element: <SourcingStoryFormPage /> },
+              { path: '/org/chart', element: <OrgChartPage /> },
+              { path: '/region/dashboard', element: <RegionDashboardPage /> },
+              { path: '/recipes', element: <RecipesPage /> },
+              { path: '/recipes/new', element: <RecipeFormPage /> },
+              { path: '/recipes/:id/edit', element: <RecipeFormPage /> },
+              { path: '/brew-methods', element: <BrewMethodsPage /> },
+              { path: '/brew-methods/new', element: <BrewMethodFormPage /> },
+              { path: '/brew-methods/:id/edit', element: <BrewMethodFormPage /> },
+              { path: '/brew-logs', element: <BrewLogsPage /> },
+              { path: '/espresso', element: <EspressoPage /> },
+              { path: '/subscriptions', element: <SubscriptionsPage /> },
+              { path: '/analytics', element: <AnalyticsPage /> },
+              { path: '/settings', element: <SettingsPage /> },
+            ],
+          },
         ],
       },
     ],

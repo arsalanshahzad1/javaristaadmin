@@ -67,7 +67,7 @@ export function StoreFormModal({ store, onClose, onSuccess }: Props) {
     const timer = setTimeout(async () => {
       setManagerLoading(true);
       try {
-        const res = await adminApiClient.get<{ data: UserOption[] }>('/users', {
+        const res = await adminApiClient.get<{ data: UserOption[] }>('/admin/users', {
           params: { search: managerSearch, role: 'store_manager', limit: 10 },
         });
         setManagerOptions(res.data.data ?? []);

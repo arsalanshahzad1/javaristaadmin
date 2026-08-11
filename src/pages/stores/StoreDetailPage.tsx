@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Building2, Mail, Phone, User, MapPin, Trash2, Upload } from 'lucide-react';
-import { storesApi, type StoreStatus } from '../../api/stores.api';
-import adminApiClient from '../../api/adminApiClient';
+import { ArrowLeft, Building2, Mail, Phone, User, MapPin, Trash2, Upload, Plus } from 'lucide-react';
+import { storesApi, type StoreStatus, type StoreEmployee } from '../../api/stores.api';
 import { StoreFormModal } from './StoreFormModal';
+import { CreateEmployeeModal } from './CreateEmployeeModal';
+import { useAuth } from '../../hooks/useAuth';
+import { ADMIN_ROLES } from '../../types';
 
 const STATUS_STYLES: Record<StoreStatus, { label: string; className: string }> = {
   planning: { label: 'Planning', className: 'bg-[#2A2A2A] text-[#999]' },
@@ -14,18 +16,23 @@ const STATUS_STYLES: Record<StoreStatus, { label: string; className: string }> =
   closed: { label: 'Closed', className: 'bg-red-900/30 text-red-400' },
 };
 
-interface Employee {
-  _id: string;
-  name: string;
-  email: string;
-  role: string;
+interface Props {
+  idOverride?: string;
+  hideBackButton?: boolean;
 }
 
-export function StoreDetailPage() {
-  const { id } = useParams<{ id: string }>();
+export function StoreDetailPage({ idOverride, hideBackButton }: Props = {}) {
+  const params = useParams<{ id: string }>();
+  const id = idOverride ?? params.id;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const isCorporate = Boolean(user && ADMIN_ROLES.includes(user.role));
   const [editOpen, setEditOpen] = useState(false);
+  const [employeeModal, setEmployeeModal] = useState<{ open: boolean; employee: StoreEmployee | null }>({
+    open: false,
+    employee: null,
+  });
   const [activeTab, setActiveTab] = useState<'info' | 'employees'>('info');
   const [uploading, setUploading] = useState(false);
 
@@ -35,15 +42,15 @@ export function StoreDetailPage() {
     enabled: Boolean(id),
   });
 
-  const { data: employees = [] } = useQuery<Employee[]>({
-    queryKey: ['store-employees', store?.storeNumber],
-    queryFn: async () => {
-      const res = await adminApiClient.get<{ data: Employee[] }>('/users', {
-        params: { storeId: store!.storeNumber, limit: 100 },
-      });
-      return res.data.data ?? [];
-    },
-    enabled: Boolean(store?.storeNumber),
+  const { data: employees = [], refetch: refetchEmployees } = useQuery<StoreEmployee[]>({
+    queryKey: ['store-employees', id],
+    queryFn: () => storesApi.listEmployees(id!),
+    enabled: Boolean(id),
+  });
+
+  const deactivateEmployeeMutation = useMutation({
+    mutationFn: (employeeId: string) => storesApi.deactivateEmployee(id!, employeeId),
+    onSuccess: () => refetchEmployees(),
   });
 
   const removePhotoMutation = useMutation({
@@ -89,13 +96,15 @@ export function StoreDetailPage() {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       {/* Back */}
-      <button
-        onClick={() => navigate('/stores')}
-        className="flex items-center gap-1.5 text-sm text-[#666] hover:text-white mb-5 transition-colors"
-      >
-        <ArrowLeft size={14} />
-        Back to Stores
-      </button>
+      {!hideBackButton && (
+        <button
+          onClick={() => navigate('/stores')}
+          className="flex items-center gap-1.5 text-sm text-[#666] hover:text-white mb-5 transition-colors"
+        >
+          <ArrowLeft size={14} />
+          Back to Stores
+        </button>
+      )}
 
       {/* Header card */}
       <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl overflow-hidden mb-5">
@@ -120,12 +129,14 @@ export function StoreDetailPage() {
               {statusStyle.label}
             </span>
           </div>
-          <button
-            onClick={() => setEditOpen(true)}
-            className="px-4 py-2 text-sm font-semibold bg-[#D62B2B] hover:bg-red-700 text-white rounded-lg transition-colors flex-shrink-0"
-          >
-            Edit Store
-          </button>
+          {isCorporate && (
+            <button
+              onClick={() => setEditOpen(true)}
+              className="px-4 py-2 text-sm font-semibold bg-[#D62B2B] hover:bg-red-700 text-white rounded-lg transition-colors flex-shrink-0"
+            >
+              Edit Store
+            </button>
+          )}
         </div>
       </div>
 
@@ -255,33 +266,62 @@ export function StoreDetailPage() {
       )}
 
       {activeTab === 'employees' && (
-        <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl overflow-hidden">
-          {employees.length === 0 ? (
-            <div className="py-12 text-center text-[#555]">No employees assigned to this store.</div>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[#2A2A2A]">
-                  <th className="text-left px-4 py-3 text-xs text-[#666] font-medium">Name</th>
-                  <th className="text-left px-4 py-3 text-xs text-[#666] font-medium">Email</th>
-                  <th className="text-left px-4 py-3 text-xs text-[#666] font-medium">Role</th>
-                </tr>
-              </thead>
-              <tbody>
-                {employees.map((emp) => (
-                  <tr key={emp._id} className="border-b border-[#1F1F1F] last:border-0 hover:bg-[#1F1F1F]">
-                    <td className="px-4 py-3 text-white">{emp.name}</td>
-                    <td className="px-4 py-3 text-[#999]">{emp.email}</td>
-                    <td className="px-4 py-3">
-                      <span className="text-xs bg-[#242424] text-[#aaa] px-2 py-0.5 rounded">
-                        {emp.role}
-                      </span>
-                    </td>
+        <div className="space-y-4">
+          <div className="flex justify-end">
+            <button
+              onClick={() => setEmployeeModal({ open: true, employee: null })}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold bg-[#D62B2B] hover:bg-red-700 text-white rounded-lg transition-colors"
+            >
+              <Plus size={14} />
+              New Employee
+            </button>
+          </div>
+
+          <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl overflow-hidden">
+            {employees.length === 0 ? (
+              <div className="py-12 text-center text-[#555]">No employees assigned to this store.</div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[#2A2A2A]">
+                    <th className="text-left px-4 py-3 text-xs text-[#666] font-medium">Name</th>
+                    <th className="text-left px-4 py-3 text-xs text-[#666] font-medium">Email</th>
+                    <th className="text-left px-4 py-3 text-xs text-[#666] font-medium">Role</th>
+                    <th className="text-left px-4 py-3 text-xs text-[#666] font-medium">Employee Role</th>
+                    <th className="text-right px-4 py-3 text-xs text-[#666] font-medium">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+                </thead>
+                <tbody>
+                  {employees.map((emp) => (
+                    <tr key={emp._id} className="border-b border-[#1F1F1F] last:border-0 hover:bg-[#1F1F1F]">
+                      <td className="px-4 py-3 text-white">{emp.name}</td>
+                      <td className="px-4 py-3 text-[#999]">{emp.email}</td>
+                      <td className="px-4 py-3">
+                        <span className="text-xs bg-[#242424] text-[#aaa] px-2 py-0.5 rounded">
+                          {emp.role}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-[#999]">{emp.employeeRoleId?.name ?? '—'}</td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={() => setEmployeeModal({ open: true, employee: emp })}
+                          className="text-xs text-[#999] hover:text-white mr-3 transition-colors"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => deactivateEmployeeMutation.mutate(emp._id)}
+                          className="text-xs text-red-400 hover:text-red-300 transition-colors"
+                        >
+                          Deactivate
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
       )}
 
@@ -293,6 +333,19 @@ export function StoreDetailPage() {
             queryClient.invalidateQueries({ queryKey: ['store', id] });
             queryClient.invalidateQueries({ queryKey: ['stores'] });
             setEditOpen(false);
+          }}
+        />
+      )}
+
+      {employeeModal.open && (
+        <CreateEmployeeModal
+          storeId={id!}
+          isStoreManager={!isCorporate}
+          employee={employeeModal.employee}
+          onClose={() => setEmployeeModal({ open: false, employee: null })}
+          onSuccess={() => {
+            refetchEmployees();
+            setEmployeeModal({ open: false, employee: null });
           }}
         />
       )}

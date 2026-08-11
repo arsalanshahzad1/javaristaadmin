@@ -10,7 +10,7 @@ import { adminAuthStorage } from '../../api/adminAuthStorage';
 import { useAuth } from '../../hooks/useAuth';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
-import { ADMIN_ROLES } from '../../types';
+import { ADMIN_APP_ROLES } from '../../types';
 
 const schema = z.object({
   email: z.string().email('Enter a valid email'),
@@ -33,7 +33,7 @@ export function AdminLoginPage() {
     try {
       const res = await authApi.login(data.email, data.password);
       const { user, accessToken, refreshToken } = res.data.data;
-      if (!ADMIN_ROLES.includes(user.role)) {
+      if (!ADMIN_APP_ROLES.includes(user.role)) {
         adminAuthStorage.clearSession();
         toast.error('Admin access only');
         return;
@@ -60,7 +60,7 @@ export function AdminLoginPage() {
           </div>
           <div className="text-center">
             <div className="text-xl font-semibold text-white leading-tight">JavaRista</div>
-            <div className="text-xs text-[#666] mt-0.5">Admin Panel</div>
+            {/* <div className="text-xs text-[#666] mt-0.5">Admin Panel</div> */}
           </div>
         </div>
 
@@ -121,7 +121,7 @@ export function AdminLoginPage() {
           </form>
         </div>
 
-        <p className="text-center text-[10px] text-[#444] mt-6">JavaRista Admin v1.0</p>
+        {/* <p className="text-center text-[10px] text-[#444] mt-6">JavaRista Admin v1.0</p> */}
       </div>
     </div>
   );

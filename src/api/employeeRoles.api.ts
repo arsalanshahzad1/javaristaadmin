@@ -29,6 +29,12 @@ export const employeeRolesApi = {
     return adminApiClient.get<Envelope<PermissionRegistry>>('/employee-roles/permissions');
   },
 
+  assignable() {
+    return adminApiClient.get<Envelope<Pick<EmployeeRoleDoc, '_id' | 'name' | 'description' | 'storeId'>[]>>(
+      '/employee-roles/assignable'
+    );
+  },
+
   create(body: { name: string; description?: string; permissions: string[]; storeId?: string }) {
     return adminApiClient.post<Envelope<EmployeeRoleDoc>>('/employee-roles', body);
   },

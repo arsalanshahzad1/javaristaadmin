@@ -4,18 +4,22 @@ import {
   LayoutDashboard, GraduationCap, BookOpen, ShoppingBag, Lock,
   ClipboardList, Award, Users, BarChart2, MessageCircle, Coffee,
   Clock, LogOut, ChevronLeft, ChevronRight, Settings, GitPullRequest,
-    CoffeeIcon, 
+  CoffeeIcon, Building2, ShieldCheck,
   } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { adminAuthStorage } from '../../api/adminAuthStorage';
 import { useAuth } from '../../hooks/useAuth';
 import { authApi } from '../../api/auth.api';
 import { Breadcrumb } from './Breadcrumb';
 import { ErrorBoundary } from '../ErrorBoundary';
+import { ADMIN_ROLES, type UserRole } from '../../types';
+import { canSeeItem } from '../../config/navigation.config';
 
 interface NavItem {
   to: string;
-  icon: React.ElementType;
+  icon: LucideIcon;
   label: string;
+  allowedRoles: UserRole[] | 'all';
 }
 
 interface NavSection {
@@ -27,61 +31,52 @@ const navSections: NavSection[] = [
   {
     title: 'OVERVIEW',
     items: [
-      { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+      { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', allowedRoles: ADMIN_ROLES },
+      { to: '/my-store', icon: Building2, label: 'My Store', allowedRoles: ['store_manager'] },
     ],
   },
   {
     title: 'CONTENT',
     items: [
-      { to: '/java-academy', icon: GraduationCap, label: 'Java Academy' },
-      { to: '/playbooks', icon: BookOpen, label: 'Playbooks' },
-      { to: '/store-ops', icon: ShoppingBag, label: 'Store Operations' },
-      { to: '/brew-methods', icon: Coffee, label: 'Brew Methods' },
-      { to: '/investor-content', icon: Lock, label: 'Investor Content' },
+      { to: '/java-academy', icon: GraduationCap, label: 'Java Academy', allowedRoles: 'all' },
+      { to: '/playbooks', icon: BookOpen, label: 'Playbooks', allowedRoles: 'all' },
+      { to: '/store-ops', icon: ShoppingBag, label: 'Store Operations', allowedRoles: 'all' },
+      { to: '/brew-methods', icon: Coffee, label: 'Brew Methods', allowedRoles: ADMIN_ROLES },
+      { to: '/investor-content', icon: Lock, label: 'Investor Content', allowedRoles: ADMIN_ROLES },
     ],
   },
   {
     title: 'OPERATIONS',
     items: [
-      { to: '/checklists', icon: ClipboardList, label: 'Checklists' },
-      { to: '/certifications', icon: Award, label: 'Certifications' },
-      // { to: '/region/certifications', icon: Award, label: 'Region Certifications' },
-   
-
-
+      { to: '/stores', icon: Building2, label: 'Stores', allowedRoles: ADMIN_ROLES },
+      { to: '/checklists', icon: ClipboardList, label: 'Checklists', allowedRoles: 'all' },
+      { to: '/certifications', icon: Award, label: 'Certifications', allowedRoles: 'all' },
     ],
   },
   {
     title: 'PEOPLE',
     items: [
-      { to: '/users', icon: Users, label: 'Users & Roles' },
-      { to: '/team-performance', icon: BarChart2, label: 'Team Performance' },
-      // { to: '/region/dashboard', icon: BarChart2, label: 'Region Dashboard' },
+      { to: '/users', icon: Users, label: 'Users & Roles', allowedRoles: ADMIN_ROLES },
+      { to: '/employee-roles', icon: ShieldCheck, label: 'Employee Roles', allowedRoles: ADMIN_ROLES },
+      { to: '/team-performance', icon: BarChart2, label: 'Team Performance', allowedRoles: 'all' },
     ],
   },
-
-{
-  title: 'Create Recipes',
-  items: [
-    // { to: '/role-manuals',   icon: BookMarked,  label: 'Role Manuals' },
-    // { to: '/stores',         icon: Building2,   label: 'Stores' },
-    // { to: '/employee-roles', icon: ShieldCheck, label: 'Employee Roles' },
-    { to: '/recipes', icon: CoffeeIcon, label: 'Recipes' },
-  ],
-},
-
-
+  {
+    title: 'Create Recipes',
+    items: [
+      { to: '/recipes', icon: CoffeeIcon, label: 'Recipes', allowedRoles: ADMIN_ROLES },
+    ],
+  },
   {
     title: 'ORGANISATION',
     items: [
-      // { to: '/org/chart', icon: Network, label: 'Org Chart' },
-      { to: '/org/role-changes', icon: GitPullRequest, label: 'Role Requests' },
+      { to: '/org/role-changes', icon: GitPullRequest, label: 'Role Requests', allowedRoles: 'all' },
     ],
   },
   {
     title: 'COMMUNITY',
     items: [
-      { to: '/community', icon: MessageCircle, label: 'Community' },
+      { to: '/community', icon: MessageCircle, label: 'Community', allowedRoles: 'all' },
     ],
   },
 ];
@@ -143,40 +138,46 @@ function AdminSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: (
         {!collapsed && (
           <div>
             <div className="font-semibold text-white text-sm leading-tight">JavaRista</div>
-            <div className="text-[10px] text-[#666] leading-tight mt-0.5">Admin Panel</div>
+            {/* <div className="text-[10px] text-[#666] leading-tight mt-0.5">Admin Panel</div> */}
           </div>
         )}
       </div>
 
       {/* Nav */}
       <nav className="flex-1 px-2 py-3 overflow-y-auto">
-        {navSections.map((section) => (
-          <div key={section.title} className="mb-4">
-            {!collapsed && (
-              <div className="px-3 mb-1 text-[10px] font-semibold text-[#444] tracking-widest">
-                {section.title}
-              </div>
-            )}
-            <ul className="flex flex-col gap-0.5">
-              {section.items.map(({ to, icon, label }) => (
-                <li key={to}>
-                  <NavLink to={to} icon={icon} label={label} collapsed={collapsed} isActive={isActive(to)} />
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
+        {navSections.map((section) => {
+          const visibleItems = section.items.filter((item) => canSeeItem(item, user?.role));
+          if (visibleItems.length === 0) return null;
+          return (
+            <div key={section.title} className="mb-4">
+              {!collapsed && (
+                <div className="px-3 mb-1 text-[10px] font-semibold text-[#444] tracking-widest">
+                  {section.title}
+                </div>
+              )}
+              <ul className="flex flex-col gap-0.5">
+                {visibleItems.map(({ to, icon, label }) => (
+                  <li key={to}>
+                    <NavLink to={to} icon={icon} label={label} collapsed={collapsed} isActive={isActive(to)} />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
 
         {/* Settings divider */}
-        <div className="mt-2 pt-2 border-t border-[#2A2A2A]">
-          <NavLink
-            to="/settings"
-            icon={Settings}
-            label="Settings"
-            collapsed={collapsed}
-            isActive={isActive('/settings')}
-          />
-        </div>
+        {user && ADMIN_ROLES.includes(user.role) && (
+          <div className="mt-2 pt-2 border-t border-[#2A2A2A]">
+            <NavLink
+              to="/settings"
+              icon={Settings}
+              label="Settings"
+              collapsed={collapsed}
+              isActive={isActive('/settings')}
+            />
+          </div>
+        )}
       </nav>
 
       {/* User + logout */}
