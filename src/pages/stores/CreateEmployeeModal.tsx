@@ -7,16 +7,21 @@ import { Button } from '../../components/ui/Button';
 import { storesApi, type StoreEmployee } from '../../api/stores.api';
 import { employeeRolesApi } from '../../api/employeeRoles.api';
 
-const FRONT_LINE_ROLES = ['barista', 'trainee', 'shift_supervisor', 'assistant_manager'];
-const ALL_STORE_ROLES = ['store_manager', 'assistant_manager', 'shift_supervisor', 'barista', 'trainee'];
+const FRONT_LINE_ROLES = ['barista', 'employee', 'trainee', 'shift_supervisor', 'assistant_manager'];
+const ALL_STORE_ROLES = ['store_manager', 'assistant_manager', 'shift_supervisor', 'barista', 'employee', 'trainee'];
 
 const ROLE_LABELS: Record<string, string> = {
   store_manager: 'Store Manager',
   assistant_manager: 'Assistant Manager',
   shift_supervisor: 'Shift Supervisor',
   barista: 'Barista',
+  employee: 'Employee',
   trainee: 'Trainee',
 };
+
+function normalizeStoreRole(role?: string | null): string {
+  return role === 'employee' ? 'barista' : (role ?? '');
+}
 
 interface FormValues {
   name: string;
@@ -47,7 +52,7 @@ export function CreateEmployeeModal({ storeId, isStoreManager, employee, onClose
       name: employee?.name ?? '',
       email: employee?.email ?? '',
       password: '',
-      role: employee?.role ?? availableRoles[0],
+      role: employee?.role === 'employee' ? 'employee' : (employee?.role ?? availableRoles[0]),
       employeeRoleId: employee?.employeeRoleId?._id ?? '',
     },
   });
@@ -67,7 +72,7 @@ export function CreateEmployeeModal({ storeId, isStoreManager, employee, onClose
       if (isEdit && employee) {
         await storesApi.updateEmployee(storeId, employee._id, {
           name: values.name,
-          role: values.role,
+          role: normalizeStoreRole(values.role),
           employeeRoleId: values.employeeRoleId || null,
         });
       } else {
@@ -75,7 +80,7 @@ export function CreateEmployeeModal({ storeId, isStoreManager, employee, onClose
           name: values.name,
           email: values.email,
           password: values.password,
-          role: values.role,
+          role: normalizeStoreRole(values.role),
           employeeRoleId: values.employeeRoleId || null,
         });
       }
