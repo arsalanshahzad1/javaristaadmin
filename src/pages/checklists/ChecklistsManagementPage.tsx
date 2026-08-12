@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ClipboardList, Edit, Eye, Plus, RefreshCw, Trash2, X } from 'lucide-react';
+import { ClipboardList, Edit, Eye, Plus, RefreshCw, Send, Trash2, X } from 'lucide-react';
 import { useFieldArray, useForm, useWatch } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import type { AxiosError } from 'axios';
@@ -9,6 +9,9 @@ import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { useDebounce } from '../../hooks/useDebounce';
 import { resolveMediaUrl } from '../../utils/media';
+import { useAuth } from '../../hooks/useAuth';
+import { ADMIN_ROLES } from '../../types';
+import { storesApi, type StoreEmployee } from '../../api/stores.api';
 
 type Category =
   | 'opening'
@@ -211,9 +214,19 @@ async function approveSubmission(payload: { id: string; status: 'approved' | 'fl
   return response.data;
 }
 
+async function assignTask(payload: { checklistId: string; employeeId: string; scheduledFor?: string }) {
+  const response = await adminApiClient.post<ApiEnvelope<unknown>>('/checklist-schedules/assign', payload);
+  return response.data;
+}
+
 async function getComplianceSummary() {
   const response = await adminApiClient.get<ApiEnvelope<ComplianceSummary>>('/checklist-schedules/compliance');
   return response.data.data;
+}
+
+function toDatetimeLocalValue(date: Date) {
+  const offsetMs = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
 }
 
 function fieldClass() {
@@ -527,6 +540,130 @@ function TemplateModal({ isOpen, onClose, template }: { isOpen: boolean; onClose
   );
 }
 
+function AssignTaskModal({
+  isOpen,
+  onClose,
+  template,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  template: Template | null;
+}) {
+  const queryClient = useQueryClient();
+  const [employeeId, setEmployeeId] = useState('');
+  const [scheduledFor, setScheduledFor] = useState(() => toDatetimeLocalValue(new Date()));
+
+  const storesQuery = useQuery({
+    queryKey: ['assign-task-store'],
+    queryFn: () => storesApi.getAll(),
+    enabled: isOpen,
+  });
+
+  const storeId = storesQuery.data?.[0]?._id;
+
+  const employeesQuery = useQuery<StoreEmployee[]>({
+    queryKey: ['assign-task-employees', storeId],
+    queryFn: () => storesApi.listEmployees(storeId!),
+    enabled: isOpen && Boolean(storeId),
+  });
+
+  const eligibleEmployees = (employeesQuery.data ?? []).filter((employee) => {
+    if (employee.role === 'store_manager') return false;
+    const assignedRoles = template?.assignedRoles ?? [];
+    return assignedRoles.length === 0 || assignedRoles.includes(employee.role);
+  });
+
+  const mutation = useMutation({
+    mutationFn: assignTask,
+    onSuccess: (response) => {
+      toast.success(response.message || 'Task assigned');
+      queryClient.invalidateQueries({ queryKey: ['checklist-compliance'] });
+      onClose();
+      setEmployeeId('');
+      setScheduledFor(toDatetimeLocalValue(new Date()));
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  });
+
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!template || !employeeId) return;
+    mutation.mutate({
+      checklistId: template._id,
+      employeeId,
+      scheduledFor: scheduledFor ? new Date(scheduledFor).toISOString() : undefined,
+    });
+  }
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Assign Checklist Task" size="md">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="rounded-lg border border-[#2A2A2A] bg-[#151515] p-4">
+          <p className="text-xs uppercase tracking-wide text-[#666]">Checklist</p>
+          <p className="mt-1 text-sm font-semibold text-white">{template?.title ?? 'Checklist'}</p>
+          {template?.assignedRoles?.length ? (
+            <p className="mt-2 text-xs text-[#777]">
+              Eligible roles: {template.assignedRoles.map((role) => role.replace(/_/g, ' ')).join(', ')}
+            </p>
+          ) : null}
+        </div>
+
+        {storesQuery.isLoading || employeesQuery.isLoading ? (
+          <div className="h-24 animate-pulse rounded-lg bg-[#242424]" />
+        ) : !storeId ? (
+          <p className="rounded-lg border border-red-900/40 bg-red-900/20 px-3 py-2 text-sm text-red-300">
+            Your account is not assigned to a store.
+          </p>
+        ) : eligibleEmployees.length === 0 ? (
+          <p className="rounded-lg border border-[#333] bg-[#111] px-3 py-2 text-sm text-[#999]">
+            No eligible employees found for this checklist in your store.
+          </p>
+        ) : (
+          <div>
+            <label className="mb-1 block text-sm font-medium text-[#ccc]">Employee</label>
+            <select
+              value={employeeId}
+              onChange={(event) => setEmployeeId(event.target.value)}
+              className={fieldClass()}
+              required
+            >
+              <option value="">Select employee</option>
+              {eligibleEmployees.map((employee) => (
+                <option key={employee._id} value={employee._id}>
+                  {employee.name} - {employee.role.replace(/_/g, ' ')}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-[#ccc]">Due Date & Time</label>
+          <input
+            type="datetime-local"
+            value={scheduledFor}
+            onChange={(event) => setScheduledFor(event.target.value)}
+            className={fieldClass()}
+          />
+        </div>
+
+        <div className="flex justify-end gap-3 pt-2">
+          <button type="button" onClick={onClose} className="rounded-lg border border-[#333] px-4 py-2 text-sm font-medium text-[#ddd] hover:bg-[#242424]">
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={!template || !employeeId || mutation.isPending || !storeId}
+            className="inline-flex items-center gap-2 rounded-lg bg-[#D62B2B] px-4 py-2 text-sm font-medium text-white hover:bg-[#B92323] disabled:opacity-50"
+          >
+            <Send size={14} /> Assign Task
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
 function SubmissionReviewModal({ submissionId, onClose }: { submissionId: string | null; onClose: () => void }) {
   const queryClient = useQueryClient();
   const noteForm = useForm<{ managerNote: string }>({ defaultValues: { managerNote: '' } });
@@ -719,9 +856,13 @@ function SkeletonRows({ columns }: { columns: number }) {
 
 export function ChecklistsManagementPage() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const canManageTemplates = Boolean(user && ADMIN_ROLES.includes(user.role));
+  const canAssignTasks = user?.role === 'store_manager';
   const [tab, setTab] = useState<'templates' | 'submissions' | 'compliance'>('templates');
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
+  const [assigningTemplate, setAssigningTemplate] = useState<Template | null>(null);
   const [reviewSubmissionId, setReviewSubmissionId] = useState<string | null>(null);
   const [status, setStatus] = useState('');
   const [category, setCategory] = useState('');
@@ -781,7 +922,7 @@ export function ChecklistsManagementPage() {
           <h1 className="text-2xl font-bold text-white">Checklists</h1>
           <p className="mt-1 text-sm text-[#777]">Manage operational checklist templates, submissions, and compliance.</p>
         </div>
-        {tab === 'templates' && (
+        {tab === 'templates' && canManageTemplates && (
           <button type="button" onClick={() => { setEditingTemplate(null); setTemplateModalOpen(true); }} className="inline-flex items-center gap-2 rounded-lg bg-[#D62B2B] px-4 py-2 text-sm font-medium text-white hover:bg-[#B92323]">
             <Plus size={16} /> New Template
           </button>
@@ -810,12 +951,12 @@ export function ChecklistsManagementPage() {
                   <th className="px-4 py-3 font-medium">Items</th>
                   <th className="px-4 py-3 font-medium">Scheduled</th>
                   <th className="px-4 py-3 font-medium">Active</th>
-                  <th className="px-4 py-3 text-right font-medium">Actions</th>
+                  {(canManageTemplates || canAssignTasks) && <th className="px-4 py-3 text-right font-medium">Actions</th>}
                 </tr>
               </thead>
               <tbody>
-                {templatesQuery.isLoading ? <SkeletonRows columns={7} /> : (templatesQuery.data ?? []).length === 0 ? (
-                  <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-[#777]"><ClipboardList className="mx-auto mb-3 text-[#555]" />No templates found</td></tr>
+                {templatesQuery.isLoading ? <SkeletonRows columns={canManageTemplates || canAssignTasks ? 7 : 6} /> : (templatesQuery.data ?? []).length === 0 ? (
+                  <tr><td colSpan={canManageTemplates || canAssignTasks ? 7 : 6} className="px-4 py-12 text-center text-sm text-[#777]"><ClipboardList className="mx-auto mb-3 text-[#555]" />No templates found</td></tr>
                 ) : (templatesQuery.data ?? []).map((template, index) => (
                   <tr key={template._id} className={`${index % 2 === 0 ? 'bg-[#171717]' : 'bg-[#1E1E1E]'} border-b border-[#242424]`}>
                     <td className="px-4 py-3 font-medium text-white">{template.title}</td>
@@ -830,12 +971,21 @@ export function ChecklistsManagementPage() {
                     <td className="px-4 py-3 text-[#bbb]">{template.items.length}</td>
                     <td className="px-4 py-3"><Badge variant={template.isScheduled ? 'info' : 'default'}>{template.isScheduled ? 'Yes' : 'No'}</Badge></td>
                     <td className="px-4 py-3"><Badge variant={template.isActive ? 'success' : 'default'}>{template.isActive ? 'Active' : 'Inactive'}</Badge></td>
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end gap-2">
-                        <button type="button" onClick={() => { setEditingTemplate(template); setTemplateModalOpen(true); }} className="inline-flex items-center gap-1 rounded-lg border border-[#333] px-3 py-1.5 text-xs text-[#ddd] hover:bg-[#242424]"><Edit size={13} /> Edit</button>
-                        <button type="button" onClick={() => toggleTemplateMutation.mutate(template)} className="inline-flex items-center gap-1 rounded-lg border border-[#333] px-3 py-1.5 text-xs text-[#ddd] hover:bg-[#242424]"><RefreshCw size={13} /> Toggle</button>
-                      </div>
-                    </td>
+                    {(canManageTemplates || canAssignTasks) && (
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-2">
+                          {canAssignTasks && (
+                            <button type="button" onClick={() => setAssigningTemplate(template)} className="inline-flex items-center gap-1 rounded-lg border border-[#333] px-3 py-1.5 text-xs text-[#ddd] hover:bg-[#242424]"><Send size={13} /> Assign</button>
+                          )}
+                          {canManageTemplates && (
+                            <>
+                              <button type="button" onClick={() => { setEditingTemplate(template); setTemplateModalOpen(true); }} className="inline-flex items-center gap-1 rounded-lg border border-[#333] px-3 py-1.5 text-xs text-[#ddd] hover:bg-[#242424]"><Edit size={13} /> Edit</button>
+                              <button type="button" onClick={() => toggleTemplateMutation.mutate(template)} className="inline-flex items-center gap-1 rounded-lg border border-[#333] px-3 py-1.5 text-xs text-[#ddd] hover:bg-[#242424]"><RefreshCw size={13} /> Toggle</button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -886,7 +1036,16 @@ export function ChecklistsManagementPage() {
         </section>
       )}
 
-      <TemplateModal isOpen={templateModalOpen} onClose={() => setTemplateModalOpen(false)} template={editingTemplate} />
+      {canManageTemplates && (
+        <TemplateModal isOpen={templateModalOpen} onClose={() => setTemplateModalOpen(false)} template={editingTemplate} />
+      )}
+      {canAssignTasks && (
+        <AssignTaskModal
+          isOpen={Boolean(assigningTemplate)}
+          onClose={() => setAssigningTemplate(null)}
+          template={assigningTemplate}
+        />
+      )}
       <SubmissionReviewModal submissionId={reviewSubmissionId} onClose={() => setReviewSubmissionId(null)} />
     </div>
   );
