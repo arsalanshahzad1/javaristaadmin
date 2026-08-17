@@ -76,7 +76,7 @@ const navSections: NavSection[] = [
   {
     title: 'COMMUNITY',
     items: [
-      { to: '/community', icon: MessageCircle, label: 'Community', allowedRoles: 'all' },
+      { to: '/community', icon: MessageCircle, label: 'Community', allowedRoles: ADMIN_ROLES },
     ],
   },
 ];

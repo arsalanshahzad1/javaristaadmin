@@ -64,7 +64,7 @@ export const navSections: NavSection[] = [
   {
     title: 'COMMUNITY',
     items: [
-      { to: '/community', label: 'Community', icon: MessageSquare, allowedRoles: 'all' },
+      { to: '/community', label: 'Community', icon: MessageSquare, allowedRoles: ADMIN_ROLES },
     ],
   },
   {

@@ -86,12 +86,12 @@ export const adminRouter = createBrowserRouter([
           { path: '/team-performance/employee/:userId', element: <EmployeeProfilePage /> },
           { path: '/org/role-changes', element: <RoleChangeRequestsPage /> },
           { path: '/brew-shares', element: <BrewSharesPage /> },
-          { path: '/community', element: <CommunityPage /> },
 
           // Corporate-only
           {
             element: <CorporateOnlyRoute />,
             children: [
+              { path: '/community', element: <CommunityPage /> },
               { path: '/stores', element: <StoresPage /> },
               { path: '/stores/:id', element: <StoreDetailPage /> },
               { path: '/employee-roles', element: <EmployeeRolesPage /> },
